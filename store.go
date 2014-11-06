@@ -252,7 +252,7 @@ func TableName(t Interface) string {
 
 func getType(i interface{}) string {
 	switch i.(type) {
-	case *int, *int64, *time.Time:
+	case *bool, *int, *int64, *time.Time:
 		return "INTEGER"
 	case *float64:
 		return "FLOAT"
@@ -273,6 +273,8 @@ func unPointers(is []interface{}) []interface{} {
 
 func unPointer(i interface{}) interface{} {
 	switch v := i.(type) {
+	case *bool:
+		return *v
 	case *int:
 		return *v
 	case *int64:
