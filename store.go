@@ -55,7 +55,7 @@ func (s *Store) Register(t Interface) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	tableName := getTableName(t)
+	tableName := TableName(t)
 	tVars := t.Get()
 
 	var sqlVars, sqlParams, setSQLParams, tableVars string
@@ -140,7 +140,7 @@ func (s *Store) Set(ts ...Interface) (id int, err error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	for _, t := range ts {
-		tableName := getTableName(t)
+		tableName := TableName(t)
 		vars := t.Get()
 		p := vars[t.Key()]
 		var primary int
@@ -173,7 +173,7 @@ func (s *Store) Get(ts ...Interface) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	for _, t := range ts {
-		tableName := getTableName(t)
+		tableName := TableName(t)
 		stmt := s.statements[tableName][get]
 		vars := t.Get()
 		err := stmt.Query(unPointer(vars[t.Key()]))
@@ -194,7 +194,7 @@ func (s *Store) GetPage(data []Interface, offset int) error {
 	if len(data) < 1 {
 		return nil
 	}
-	tableName := getTableName(data[0])
+	tableName := TableName(data[0])
 	stmt := s.statements[tableName][getPage]
 	var (
 		err error
@@ -217,7 +217,7 @@ func (s *Store) Delete(ts ...Interface) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	for _, t := range ts {
-		tableName := getTableName(t)
+		tableName := TableName(t)
 		err := s.statements[tableName][remove].Exec(unPointer(t.Get()[t.Key()]))
 		if err != nil {
 			return err
@@ -226,7 +226,7 @@ func (s *Store) Delete(ts ...Interface) error {
 	return nil
 }
 
-func getTableName(t Interface) string {
+func TableName(t Interface) string {
 	if it, ok := t.(InterfaceTable); ok {
 		return it.TableName()
 	}
