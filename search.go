@@ -2,11 +2,16 @@ package store
 
 import "io"
 
+// Searcher
 type Searcher interface {
+	// Expr returns a sqlite snippet used in the WHERE clause.
 	Expr(string) string
+	//Params returns the required parameters for the sqlite snippet.
 	Params() []interface{}
 }
 
+// Between is a searcher which searches for values between (inclusive) the
+// given values.
 type Between struct {
 	from, to int
 }
@@ -19,6 +24,7 @@ func (b Between) Params() []interface{} {
 	return []interface{}{b.from, b.to}
 }
 
+// Like implements a search which uses the LIKE syntax in a WHERE clause.
 type Like string
 
 func (Like) Expr(col string) string {
@@ -29,6 +35,9 @@ func (l Like) Params() []interface{} {
 	return []interface{}{string(l)}
 }
 
+// Search is used for a custom (non primary key) search on a table.
+//
+// Returns the number of items found and an error if any occurred.
 func (s *Store) Search(params map[string]Searcher, offset int, data ...Interface) (int, error) {
 	if len(params) == 0 {
 		return 0, NoParams{}
@@ -36,7 +45,7 @@ func (s *Store) Search(params map[string]Searcher, offset int, data ...Interface
 	if len(data) == 0 {
 		return 0, nil
 	}
-	tableName := TableName(data[0])
+	tableName := tableName(data[0])
 	cols := data[0].Get()
 	vars := make([]string, len(cols))
 	first := true
@@ -70,7 +79,7 @@ func (s *Store) Search(params map[string]Searcher, offset int, data ...Interface
 	stmt, err := s.db.Query(sql, paramVars...)
 	stmtVars := statement{Stmt: stmt, vars: vars}
 	for ; err == nil; err = stmt.Next() {
-		if typeName := TableName(data[pos]); typeName != tableName {
+		if typeName := tableName(data[pos]); typeName != tableName {
 			err = UnmatchedType{tableName, typeName}
 		} else {
 			err = stmtVars.Scan(stmtVars.Vars(data[pos].Get())...)
@@ -86,12 +95,16 @@ func (s *Store) Search(params map[string]Searcher, offset int, data ...Interface
 
 //Errors
 
+// NoParams is an error that occurs when no search parameters are given to
+// Search.
 type NoParams struct{}
 
 func (NoParams) Error() string {
 	return "no search parameters given"
 }
 
+// UnknownColumn is an error that occurrs when a search parameter requires a
+// column which does not exist for the given type.
 type UnknownColumn string
 
 func (u UnknownColumn) Error() string {

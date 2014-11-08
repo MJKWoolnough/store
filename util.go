@@ -1,14 +1,27 @@
 package store
 
+import (
+	"reflect"
+	"time"
+
+	"github.com/mxk/go-sqlite/sqlite3"
+)
+
+// TypeMap is a convenience type to reduce typing.
 type TypeMap map[string]interface{}
 
+// Interface is the data interface for the database.
 type Interface interface {
+	// Get returns a TypeMap of column name -> *type.
 	Get() TypeMap
+	// Key returns the column name of the primary key.
 	Key() string
 }
 
+// InterfaceTable is an extension of Interface which allows a custom table name.
 type InterfaceTable interface {
 	Interface
+	// TableName returns the custom table name for the type.
 	TableName() string
 }
 
@@ -25,7 +38,7 @@ func (s statement) Vars(t map[string]interface{}) []interface{} {
 	return r
 }
 
-func TableName(t Interface) string {
+func tableName(t Interface) string {
 	if it, ok := t.(InterfaceTable); ok {
 		return it.TableName()
 	}

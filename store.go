@@ -1,10 +1,9 @@
+// Store uses an Interface to automatically store information in a sqlite database
 package store
 
 import (
 	"io"
-	"reflect"
 	"sync"
-	"time"
 
 	"github.com/mxk/go-sqlite/sqlite3"
 )
@@ -23,6 +22,7 @@ type Store struct {
 	statements map[string][]statement
 }
 
+// NewStore takes the filename of a new or existing sqlite3 database
 func NewStore(filename string) (*Store, error) {
 	s, err := sqlite3.Open(filename)
 	if err != nil {
@@ -34,15 +34,18 @@ func NewStore(filename string) (*Store, error) {
 	}, nil
 }
 
+// Close closes the sqlite3 database
 func (s *Store) Close() error {
 	return s.db.Close()
 }
 
+// Register allows a type to be registered with the store, creating the table if
+// it does not already exists and prepares the common statements.
 func (s *Store) Register(t Interface) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	tableName := TableName(t)
+	tableName := tableName(t)
 	tVars := t.Get()
 
 	var sqlVars, sqlParams, setSQLParams, tableVars string
@@ -124,11 +127,13 @@ func (s *Store) Register(t Interface) error {
 	return nil
 }
 
+// Set will store the given data into the database. The instances of Interface
+// do not need to be of the same type.
 func (s *Store) Set(ts ...Interface) (id int, err error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	for _, t := range ts {
-		tableName := TableName(t)
+		tableName := tableName(t)
 		vars := t.Get()
 		p := vars[t.Key()]
 		var primary int
@@ -157,11 +162,13 @@ func (s *Store) Set(ts ...Interface) (id int, err error) {
 	return
 }
 
+// Get will retrieve the data from the database. The instance os Interface do
+// not need to be of the same type.
 func (s *Store) Get(data ...Interface) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	for _, t := range data {
-		tableName := TableName(t)
+		tableName := tableName(t)
 		stmt := s.statements[tableName][get]
 		vars := t.Get()
 		err := stmt.Query(unPointer(vars[t.Key()]))
@@ -180,20 +187,26 @@ func (s *Store) Get(data ...Interface) error {
 	return nil
 }
 
+// GetPage will get data of a single type from the database. The offset is the
+// number of items that is to be skipped before filling the data.
+//
+// The types of data all need to be of the same concrete type.
+//
+// Returns the number of items retrieved and an error if any occurred.
 func (s *Store) GetPage(offset int, data ...Interface) (int, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if len(data) < 1 {
 		return 0, nil
 	}
-	tableName := TableName(data[0])
+	tableName := tableName(data[0])
 	stmt := s.statements[tableName][getPage]
 	var (
 		err error
 		pos int
 	)
 	for err = stmt.Query(len(data), offset); err == nil; err = stmt.Next() {
-		if typeName := TableName(data[pos]); typeName != tableName {
+		if typeName := tableName(data[pos]); typeName != tableName {
 			err = UnmatchedType{tableName, typeName}
 		} else {
 			err = stmt.Scan(stmt.Vars(data[pos].Get())...)
@@ -206,11 +219,13 @@ func (s *Store) GetPage(offset int, data ...Interface) (int, error) {
 	return pos, nil
 }
 
+// Delete removes data from the database. The instances of Interface do not
+// need to be of the same type.
 func (s *Store) Delete(ts ...Interface) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	for _, t := range ts {
-		tableName := TableName(t)
+		tableName := tableName(t)
 		err := s.statements[tableName][remove].Exec(unPointer(t.Get()[t.Key()]))
 		if err != nil {
 			return err
@@ -221,12 +236,15 @@ func (s *Store) Delete(ts ...Interface) error {
 
 //Errors
 
+// WrongKeyType is an error given when the primary key is not of type int.
 type WrongKeyType struct{}
 
 func (WrongKeyType) Error() string {
 	return "primary key needs to be int"
 }
 
+// UnmatchedType is an error given when an instance of Interface does not match
+// a previous instance.
 type UnmatchedType struct {
 	MainType, ThisType string
 }
