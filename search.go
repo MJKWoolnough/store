@@ -1,0 +1,99 @@
+package store
+
+import "io"
+
+type Searcher interface {
+	Expr(string) string
+	Params() []interface{}
+}
+
+type Between struct {
+	from, to int
+}
+
+func (Between) Expr(col string) string {
+	return "[" + col + "] BETWEEN ? AND ?"
+}
+
+func (b Between) Params() []interface{} {
+	return []interface{}{b.from, b.to}
+}
+
+type Like string
+
+func (Like) Expr(col string) string {
+	return "[" + col + "] LIKE ?"
+}
+
+func (l Like) Params() []interface{} {
+	return []interface{}{string(l)}
+}
+
+func (s *Store) Search(params map[string]Searcher, offset int, data ...Interface) (int, error) {
+	if len(params) == 0 {
+		return 0, NoParams{}
+	}
+	if len(data) == 0 {
+		return 0, nil
+	}
+	tableName := TableName(data[0])
+	cols := data[0].Get()
+	vars := make([]string, len(cols))
+	first := true
+	columns := ""
+	for col := range cols {
+		if first {
+			first = false
+		} else {
+			columns += ", "
+		}
+		columns += "[" + col + "]"
+		vars = append(vars, col)
+	}
+	clause := ""
+	first = true
+	paramVars := make([]interface{}, 0, len(params))
+	for col, param := range params {
+		if _, ok := cols[col]; !ok {
+			return 0, UnknownColumn(col)
+		}
+		if first {
+			first = false
+		} else {
+			clause += " AND "
+		}
+		clause += param.Expr(col)
+		paramVars = append(paramVars, param.Params()...)
+	}
+	sql := "SELECT " + columns + " FROM [" + tableName + "] WHERE " + clause + ";"
+	pos := 0
+	stmt, err := s.db.Query(sql, paramVars...)
+	stmtVars := statement{Stmt: stmt, vars: vars}
+	for ; err == nil; err = stmt.Next() {
+		if typeName := TableName(data[pos]); typeName != tableName {
+			err = UnmatchedType{tableName, typeName}
+		} else {
+			err = stmtVars.Scan(stmtVars.Vars(data[pos].Get())...)
+			pos++
+		}
+	}
+	if err != nil && err != io.EOF {
+		return pos, err
+	}
+
+	return pos, nil
+}
+
+//Errors
+
+type NoParams struct{}
+
+func (NoParams) Error() string {
+	return "no search parameters given"
+}
+
+type UnknownColumn string
+
+func (u UnknownColumn) Error() string {
+	return "unknown column: " + string(u)
+}
