@@ -1,13 +1,12 @@
 package store
 
 import (
-	"fmt"
 	"io"
 	"reflect"
 	"sync"
 	"time"
 
-	"code.google.com/p/go-sqlite/go1/sqlite3"
+	"github.com/mxk/go-sqlite/sqlite3"
 )
 
 const (
@@ -104,6 +103,7 @@ func (s *Store) Register(t Interface) error {
 			vars = append(vars, typeName)
 		}
 	}
+	pVars := append(vars, primary)
 	sql := "CREATE TABLE IF NOT EXISTS [" + tableName + "](" + tableVars + ");"
 	err := s.db.Exec(sql)
 	if err != nil {
@@ -130,7 +130,7 @@ func (s *Store) Register(t Interface) error {
 	if err != nil {
 		return err
 	}
-	s.statements[tableName][update] = statement{Stmt: stmt, vars: append(vars, primary)}
+	s.statements[tableName][update] = statement{Stmt: stmt, vars: pVars}
 
 	sql = "DELETE FROM [" + tableName + "] WHERE [" + primary + "] = ?;"
 	stmt, err = s.db.Prepare(sql)
@@ -139,12 +139,12 @@ func (s *Store) Register(t Interface) error {
 	}
 	s.statements[tableName][remove] = statement{Stmt: stmt}
 
-	sql = "SELECT " + sqlVars + " FROM [" + tableName + "] ORDER BY [" + primary + "] LIMIT ? OFFSET ?;"
+	sql = "SELECT " + sqlVars + ", [" + primary + "] FROM [" + tableName + "] ORDER BY [" + primary + "] LIMIT ? OFFSET ?;"
 	stmt, err = s.db.Prepare(sql)
 	if err != nil {
 		return err
 	}
-	s.statements[tableName][getPage] = statement{Stmt: stmt, vars: vars}
+	s.statements[tableName][getPage] = statement{Stmt: stmt, vars: pVars}
 
 	return nil
 }
@@ -160,7 +160,7 @@ func (s *Store) Set(ts ...Interface) (id int, err error) {
 		if v, ok := p.(*int); ok {
 			primary = *v
 		} else {
-			err = fmt.Errorf("could not decide key")
+			err = WrongKeyType{}
 			return
 		}
 		if primary == 0 {
@@ -194,18 +194,22 @@ func (s *Store) Get(ts ...Interface) error {
 			return err
 		}
 		err = stmt.Scan(stmt.Vars(vars)...)
-		if err != nil {
+		if err == io.EOF {
+			if v, ok := vars[t.Key()].(*int); ok {
+				*v = 0
+			}
+		} else if err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *Store) GetPage(data []Interface, offset int) error {
+func (s *Store) GetPage(offset int, data ...Interface) (int, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if len(data) < 1 {
-		return nil
+		return 0, nil
 	}
 	tableName := TableName(data[0])
 	stmt := s.statements[tableName][getPage]
@@ -214,16 +218,16 @@ func (s *Store) GetPage(data []Interface, offset int) error {
 		pos int
 	)
 	for err = stmt.Query(len(data), offset); err == nil; err = stmt.Next() {
-		err = stmt.Scan(stmt.Vars(data[pos].Get()))
+		err = stmt.Scan(stmt.Vars(data[pos].Get())...)
 		if err != nil {
 			break
 		}
 		pos++
 	}
 	if err != nil && err != io.EOF {
-		return err
+		return pos, err
 	}
-	return nil
+	return pos, nil
 }
 
 func (s *Store) Delete(ts ...Interface) error {
@@ -288,4 +292,12 @@ func unPointer(i interface{}) interface{} {
 	default:
 		return nil
 	}
+}
+
+//Errors
+
+type WrongKeyType struct{}
+
+func (WrongKeyType) Error() string {
+	return "primary key needs to be int"
 }
