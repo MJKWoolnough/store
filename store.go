@@ -17,31 +17,6 @@ const (
 	getPage
 )
 
-type TypeMap map[string]interface{}
-
-type Interface interface {
-	Get() TypeMap
-	Key() string
-}
-
-type InterfaceTable interface {
-	Interface
-	TableName() string
-}
-
-type statement struct {
-	*sqlite3.Stmt
-	vars []string
-}
-
-func (s statement) Vars(t map[string]interface{}) []interface{} {
-	r := make([]interface{}, len(s.vars))
-	for i, v := range s.vars {
-		r[i] = t[v]
-	}
-	return r
-}
-
 type Store struct {
 	db         *sqlite3.Conn
 	mutex      sync.Mutex
@@ -182,10 +157,10 @@ func (s *Store) Set(ts ...Interface) (id int, err error) {
 	return
 }
 
-func (s *Store) Get(ts ...Interface) error {
+func (s *Store) Get(data ...Interface) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	for _, t := range ts {
+	for _, t := range data {
 		tableName := TableName(t)
 		stmt := s.statements[tableName][get]
 		vars := t.Get()
@@ -218,11 +193,12 @@ func (s *Store) GetPage(offset int, data ...Interface) (int, error) {
 		pos int
 	)
 	for err = stmt.Query(len(data), offset); err == nil; err = stmt.Next() {
-		err = stmt.Scan(stmt.Vars(data[pos].Get())...)
-		if err != nil {
-			break
+		if typeName := TableName(data[pos]); typeName != tableName {
+			err = UnmatchedType{tableName, typeName}
+		} else {
+			err = stmt.Scan(stmt.Vars(data[pos].Get())...)
+			pos++
 		}
-		pos++
 	}
 	if err != nil && err != io.EOF {
 		return pos, err
@@ -243,61 +219,18 @@ func (s *Store) Delete(ts ...Interface) error {
 	return nil
 }
 
-func TableName(t Interface) string {
-	if it, ok := t.(InterfaceTable); ok {
-		return it.TableName()
-	}
-	name := reflect.TypeOf(t).String()
-	if name[0] == '*' {
-		name = name[1:]
-	}
-	return name
-}
-
-func getType(i interface{}) string {
-	switch i.(type) {
-	case *bool, *int, *int64, *time.Time:
-		return "INTEGER"
-	case *float64:
-		return "FLOAT"
-	case *string:
-		return "TEXT"
-	case *[]byte:
-		return "BLOB"
-	}
-	return ""
-}
-
-func unPointers(is []interface{}) []interface{} {
-	for n := range is {
-		is[n] = unPointer(is[n])
-	}
-	return is
-}
-
-func unPointer(i interface{}) interface{} {
-	switch v := i.(type) {
-	case *bool:
-		return *v
-	case *int:
-		return *v
-	case *int64:
-		return *v
-	case *float64:
-		return *v
-	case *string:
-		return *v
-	case *[]byte:
-		return *v
-	default:
-		return nil
-	}
-}
-
 //Errors
 
 type WrongKeyType struct{}
 
 func (WrongKeyType) Error() string {
 	return "primary key needs to be int"
+}
+
+type UnmatchedType struct {
+	MainType, ThisType string
+}
+
+func (u UnmatchedType) Error() string {
+	return "expecting type " + u.MainType + ", got type " + u.ThisType
 }
