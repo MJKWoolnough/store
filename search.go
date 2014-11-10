@@ -4,41 +4,63 @@ import "io"
 
 // Searcher
 type Searcher interface {
-	// Expr returns a sqlite snippet used in the WHERE clause.
-	Expr(string) string
-	//Params returns the required parameters for the sqlite snippet.
-	Params() []interface{}
+	// expr returns a sqlite snippet used in the WHERE clause.
+	expr() string
+	// params returns the required parameters for the sqlite snippet.
+	params() []interface{}
+	// column returns the column name in the table
+	column() string
 }
 
 // Between is a searcher which searches for values between (inclusive) the
 // given values.
-type Between struct {
+type between struct {
+	col      string
 	from, to int
 }
 
-func (Between) Expr(col string) string {
-	return "[" + col + "] BETWEEN ? AND ?"
+// Between returns a Searcher than looks for
+func Between(column string, from, to int) Searcher {
+	return &between{column, from, to}
 }
 
-func (b Between) Params() []interface{} {
+func (b *between) expr() string {
+	return "[" + b.col + "] BETWEEN ? AND ?"
+}
+
+func (b *between) params() []interface{} {
 	return []interface{}{b.from, b.to}
 }
 
-// Like implements a search which uses the LIKE syntax in a WHERE clause.
-type Like string
-
-func (Like) Expr(col string) string {
-	return "[" + col + "] LIKE ?"
+func (b *between) column() string {
+	return b.col
 }
 
-func (l Like) Params() []interface{} {
-	return []interface{}{string(l)}
+// Like implements a search which uses the LIKE syntax in a WHERE clause.
+type like struct {
+	col, likeStr string
+}
+
+func Like(column, likeStr string) Searcher {
+	return &like{column, likeStr}
+}
+
+func (l *like) expr() string {
+	return "[" + l.col + "] LIKE ?"
+}
+
+func (l *like) params() []interface{} {
+	return []interface{}{l.likeStr}
+}
+
+func (l *like) column() string {
+	return l.col
 }
 
 // Search is used for a custom (non primary key) search on a table.
 //
 // Returns the number of items found and an error if any occurred.
-func (s *Store) Search(params map[string]Searcher, offset int, data ...Interface) (int, error) {
+func (s *Store) Search(data []Interface, offset int, params ...Searcher) (int, error) {
 	if len(params) == 0 {
 		return 0, NoParams{}
 	}
@@ -47,7 +69,7 @@ func (s *Store) Search(params map[string]Searcher, offset int, data ...Interface
 	}
 	table := tableName(data[0])
 	cols := data[0].Get()
-	vars := make([]string, len(cols))
+	vars := make([]string, 0, len(cols))
 	first := true
 	columns := ""
 	for col := range cols {
@@ -62,7 +84,8 @@ func (s *Store) Search(params map[string]Searcher, offset int, data ...Interface
 	clause := ""
 	first = true
 	paramVars := make([]interface{}, 0, len(params)+2)
-	for col, param := range params {
+	for _, param := range params {
+		col := param.column()
 		if _, ok := cols[col]; !ok {
 			return 0, UnknownColumn(col)
 		}
@@ -71,10 +94,10 @@ func (s *Store) Search(params map[string]Searcher, offset int, data ...Interface
 		} else {
 			clause += " AND "
 		}
-		clause += param.Expr(col)
-		paramVars = append(paramVars, param.Params()...)
+		clause += param.expr()
+		paramVars = append(paramVars, param.params()...)
 	}
-	sql := "SELECT " + columns + " FROM [" + table + "] WHERE " + clause + " LIMIT ? OFFSET ?;"
+	sql := "SELECT " + columns + " FROM [" + table + "] WHERE " + clause + " ORDER BY [" + data[0].Key() + "] LIMIT ? OFFSET ?;"
 	stmt, err := s.db.Query(sql, append(paramVars, len(data), offset)...)
 	stmtVars := statement{Stmt: stmt, vars: vars}
 	pos := 0
