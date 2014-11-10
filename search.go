@@ -45,7 +45,7 @@ func (s *Store) Search(params map[string]Searcher, offset int, data ...Interface
 	if len(data) == 0 {
 		return 0, nil
 	}
-	tableName := tableName(data[0])
+	table := tableName(data[0])
 	cols := data[0].Get()
 	vars := make([]string, len(cols))
 	first := true
@@ -61,7 +61,7 @@ func (s *Store) Search(params map[string]Searcher, offset int, data ...Interface
 	}
 	clause := ""
 	first = true
-	paramVars := make([]interface{}, 0, len(params))
+	paramVars := make([]interface{}, 0, len(params)+2)
 	for col, param := range params {
 		if _, ok := cols[col]; !ok {
 			return 0, UnknownColumn(col)
@@ -74,13 +74,13 @@ func (s *Store) Search(params map[string]Searcher, offset int, data ...Interface
 		clause += param.Expr(col)
 		paramVars = append(paramVars, param.Params()...)
 	}
-	sql := "SELECT " + columns + " FROM [" + tableName + "] WHERE " + clause + ";"
-	pos := 0
-	stmt, err := s.db.Query(sql, paramVars...)
+	sql := "SELECT " + columns + " FROM [" + table + "] WHERE " + clause + " LIMIT ? OFFSET ?;"
+	stmt, err := s.db.Query(sql, append(paramVars, len(data), offset)...)
 	stmtVars := statement{Stmt: stmt, vars: vars}
+	pos := 0
 	for ; err == nil; err = stmt.Next() {
-		if typeName := tableName(data[pos]); typeName != tableName {
-			err = UnmatchedType{tableName, typeName}
+		if typeName := tableName(data[pos]); typeName != table {
+			err = UnmatchedType{table, typeName}
 		} else {
 			err = stmtVars.Scan(stmtVars.Vars(data[pos].Get())...)
 			pos++

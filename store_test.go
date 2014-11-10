@@ -196,7 +196,7 @@ func TestGetPage(t *testing.T) {
 		for i := 0; i < test.toGet; i++ {
 			idata[i] = &data[i]
 		}
-		num, err := s.GetPage(test.offset, idata...)
+		num, err := s.GetPage(idata, test.offset)
 		if err != nil {
 			t.Errorf("test %d: received unexpected error: %s", n+1, err)
 		} else if num != len(test.result) {
