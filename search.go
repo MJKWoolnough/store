@@ -61,6 +61,8 @@ func (l *like) column() string {
 //
 // Returns the number of items found and an error if any occurred.
 func (s *Store) Search(data []Interface, offset int, params ...Searcher) (int, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if len(params) == 0 {
 		return 0, NoParams{}
 	}
@@ -114,6 +116,44 @@ func (s *Store) Search(data []Interface, offset int, params ...Searcher) (int, e
 	}
 
 	return pos, nil
+}
+
+// SearchCount performs the search and returns the number of results
+func (s *Store) SearchCount(data Interface, params ...Searcher) (int, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	if len(params) == 0 {
+		return 0, NoParams{}
+	}
+	table := tableName(data)
+	cols := data.Get()
+	first := true
+	clause := ""
+	paramVars := make([]interface{}, 0, len(params))
+	for _, param := range params {
+		col := param.column()
+		if _, ok := cols[col]; !ok {
+			return 0, UnknownColumn(col)
+		}
+		if first {
+			first = false
+		} else {
+			clause += " AND "
+		}
+		clause += param.expr()
+		paramVars = append(paramVars, param.params()...)
+	}
+	sql := "SELECT count(1) FROM [" + table + "] WHERE " + clause + ";"
+	stmt, err := s.db.Query(sql, paramVars...)
+	if err != nil {
+		return 0, err
+	}
+	count := 0
+	err = stmt.Scan(&count)
+	if err != nil && err != io.EOF {
+		return 0, err
+	}
+	return count, nil
 }
 
 //Errors

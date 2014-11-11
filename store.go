@@ -14,6 +14,7 @@ const (
 	update
 	remove
 	getPage
+	count
 )
 
 type Store struct {
@@ -87,7 +88,7 @@ func (s *Store) Register(t Interface) error {
 	if err != nil {
 		return err
 	}
-	s.statements[table] = make([]statement, 5)
+	s.statements[table] = make([]statement, 6)
 
 	sql = "INSERT INTO [" + table + "] (" + sqlVars + ") VALUES (" + sqlParams + ");"
 	stmt, err := s.db.Prepare(sql)
@@ -123,6 +124,13 @@ func (s *Store) Register(t Interface) error {
 		return err
 	}
 	s.statements[table][getPage] = statement{Stmt: stmt, vars: pVars}
+
+	sql = "SELECT COUNT(1) FROM [" + table + "];"
+	stmt, err = s.db.Prepare(sql)
+	if err != nil {
+		return err
+	}
+	s.statements[table][count] = statement{Stmt: stmt}
 
 	return nil
 }
@@ -232,6 +240,23 @@ func (s *Store) Delete(ts ...Interface) error {
 		}
 	}
 	return nil
+}
+
+func (s *Store) Count(t Interface) (int, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	table := tableName(t)
+	stmt := s.statements[table][count]
+	err := stmt.Query()
+	if err != nil {
+		return 0, err
+	}
+	num := 0
+	err = stmt.Scan(&num)
+	if err != nil {
+		return 0, err
+	}
+	return num, nil
 }
 
 //Errors
