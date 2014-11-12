@@ -1,4 +1,4 @@
-// Store uses an Interface to automatically store information in a sqlite database
+// Package store uses an Interface to automatically store information in a sqlite database
 package store
 
 import (
@@ -17,6 +17,7 @@ const (
 	count
 )
 
+// Store is a instance of a sqlite3 connection and numerous prepared statements
 type Store struct {
 	db         *sqlite3.Conn
 	mutex      sync.Mutex
@@ -242,6 +243,7 @@ func (s *Store) Delete(ts ...Interface) error {
 	return nil
 }
 
+// Count returns the number of entries for the given type
 func (s *Store) Count(t Interface) (int, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()

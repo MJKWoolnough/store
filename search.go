@@ -2,7 +2,7 @@ package store
 
 import "io"
 
-// Searcher
+// Searcher is an interface for the different searcher params
 type Searcher interface {
 	// expr returns a sqlite snippet used in the WHERE clause.
 	expr() string
@@ -19,7 +19,7 @@ type between struct {
 	from, to int
 }
 
-// Between returns a Searcher than looks for
+// Between returns a Searcher that looks for an integer between two values
 func Between(column string, from, to int) Searcher {
 	return &between{column, from, to}
 }
@@ -41,6 +41,7 @@ type like struct {
 	col, likeStr string
 }
 
+// Like returns a Searcher that looks for similar strings
 func Like(column, likeStr string) Searcher {
 	return &like{column, likeStr}
 }
