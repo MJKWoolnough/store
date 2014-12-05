@@ -171,7 +171,7 @@ func (s *Store) Set(ts ...Interface) (id int, err error) {
 	return
 }
 
-// Get will retrieve the data from the database. The instance os Interface do
+// Get will retrieve the data from the database. The instances of Interface do
 // not need to be of the same type.
 func (s *Store) Get(data ...Interface) error {
 	s.mutex.Lock()
