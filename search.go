@@ -5,14 +5,14 @@ import "io"
 // Searcher is an interface for the different searcher params
 type Searcher interface {
 	// expr returns a sqlite snippet used in the WHERE clause.
-	expr() string
+	Expr() string
 	// params returns the required parameters for the sqlite snippet.
-	params() []interface{}
+	Params() []interface{}
 	// column returns the column name in the table
-	column() string
+	Column() string
 }
 
-// Between is a searcher which searches for values between (inclusive) the
+// between is a searcher which searches for values between (inclusive) the
 // given values.
 type between struct {
 	col      string
@@ -21,42 +21,65 @@ type between struct {
 
 // Between returns a Searcher that looks for an integer between two values
 func Between(column string, from, to int) Searcher {
-	return &between{column, from, to}
+	return between{column, from, to}
 }
 
-func (b *between) expr() string {
+func (b between) Expr() string {
 	return "[" + b.col + "] BETWEEN ? AND ?"
 }
 
-func (b *between) params() []interface{} {
+func (b between) Params() []interface{} {
 	return []interface{}{b.from, b.to}
 }
 
-func (b *between) column() string {
+func (b between) Column() string {
 	return b.col
 }
 
-// Like implements a search which uses the LIKE syntax in a WHERE clause.
+// like implements a search which uses the LIKE syntax in a WHERE clause.
 type like struct {
 	col, likeStr string
 }
 
 // Like returns a Searcher that looks for similar strings
 func Like(column, likeStr string) Searcher {
-	return &like{column, likeStr}
+	return like{column, likeStr}
 }
 
-func (l *like) expr() string {
+func (l like) Expr() string {
 	return "[" + l.col + "] LIKE ?"
 }
 
-func (l *like) params() []interface{} {
+func (l like) Params() []interface{} {
 	return []interface{}{l.likeStr}
 }
 
-func (l *like) column() string {
+func (l like) Column() string {
 	return l.col
 }
+
+type matchString struct {
+	col, match string
+}
+
+// MatchString searches for an exact string match on the given column
+func MatchString(column, match string) Searcher {
+	return matchString{column, match}
+}
+
+func (m matchString) Expr() string {
+	return "[" + m.col + "] = ?"
+}
+
+func (m matchString) Params() []interface{} {
+	return []interface{}{m.match}
+}
+
+func (m matchString) Column() string {
+	return m.col
+}
+
+//
 
 // Search is used for a custom (non primary key) search on a table.
 //
@@ -88,7 +111,7 @@ func (s *Store) Search(data []Interface, offset int, params ...Searcher) (int, e
 	first = true
 	paramVars := make([]interface{}, 0, len(params)+2)
 	for _, param := range params {
-		col := param.column()
+		col := param.Column()
 		if _, ok := cols[col]; !ok {
 			return 0, UnknownColumn(col)
 		}
@@ -97,8 +120,8 @@ func (s *Store) Search(data []Interface, offset int, params ...Searcher) (int, e
 		} else {
 			clause += " AND "
 		}
-		clause += param.expr()
-		paramVars = append(paramVars, param.params()...)
+		clause += param.Expr()
+		paramVars = append(paramVars, param.Params()...)
 	}
 	sql := "SELECT " + columns + " FROM [" + table + "] WHERE " + clause + " ORDER BY [" + data[0].Key() + "] LIMIT ? OFFSET ?;"
 	stmt, err := s.db.Query(sql, append(paramVars, len(data), offset)...)
@@ -132,7 +155,7 @@ func (s *Store) SearchCount(data Interface, params ...Searcher) (int, error) {
 	clause := ""
 	paramVars := make([]interface{}, 0, len(params))
 	for _, param := range params {
-		col := param.column()
+		col := param.Column()
 		if _, ok := cols[col]; !ok {
 			return 0, UnknownColumn(col)
 		}
@@ -141,8 +164,8 @@ func (s *Store) SearchCount(data Interface, params ...Searcher) (int, error) {
 		} else {
 			clause += " AND "
 		}
-		clause += param.expr()
-		paramVars = append(paramVars, param.params()...)
+		clause += param.Expr()
+		paramVars = append(paramVars, param.Params()...)
 	}
 	sql := "SELECT count(1) FROM [" + table + "] WHERE " + clause + ";"
 	stmt, err := s.db.Query(sql, paramVars...)
