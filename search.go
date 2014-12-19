@@ -87,9 +87,6 @@ func (m matchString) Column() string {
 func (s *Store) Search(data []Interface, offset int, params ...Searcher) (int, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	if len(params) == 0 {
-		return 0, NoParams{}
-	}
 	if len(data) == 0 {
 		return 0, nil
 	}
@@ -107,23 +104,38 @@ func (s *Store) Search(data []Interface, offset int, params ...Searcher) (int, e
 		columns += "[" + col + "]"
 		vars = append(vars, col)
 	}
-	clause := ""
-	first = true
+	var clause string
 	paramVars := make([]interface{}, 0, len(params)+2)
-	for _, param := range params {
-		col := param.Column()
-		if _, ok := cols[col]; !ok {
-			return 0, UnknownColumn(col)
+	if len(params) > 0 {
+		clause = "WHERE "
+		first = true
+		for _, param := range params {
+			col := param.Column()
+			if _, ok := cols[col]; !ok {
+				return 0, UnknownColumn(col)
+			}
+			if first {
+				first = false
+			} else {
+				clause += " AND "
+			}
+			clause += param.Expr()
+			paramVars = append(paramVars, param.Params()...)
 		}
-		if first {
-			first = false
-		} else {
-			clause += " AND "
-		}
-		clause += param.Expr()
-		paramVars = append(paramVars, param.Params()...)
 	}
-	sql := "SELECT " + columns + " FROM [" + table + "] WHERE " + clause + " ORDER BY [" + data[0].Key() + "] LIMIT ? OFFSET ?;"
+	var sortBy, dir string
+	if s, ok := data[0].(Sort); ok {
+		sortBy = s.SortBy
+		if s.Asc {
+			dir = "ASC"
+		} else {
+			dir = "DESC"
+		}
+	} else {
+		sortBy = data[0].Key()
+		dir = "ASC"
+	}
+	sql := "SELECT " + columns + " FROM [" + table + "] " + clause + " ORDER BY [" + sortBy + "] " + dir + " LIMIT ? OFFSET ?;"
 	stmt, err := s.db.Query(sql, append(paramVars, len(data), offset)...)
 	stmtVars := statement{Stmt: stmt, vars: vars}
 	pos := 0
@@ -146,28 +158,28 @@ func (s *Store) Search(data []Interface, offset int, params ...Searcher) (int, e
 func (s *Store) SearchCount(data Interface, params ...Searcher) (int, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	if len(params) == 0 {
-		return 0, NoParams{}
-	}
 	table := tableName(data)
 	cols := data.Get()
 	first := true
-	clause := ""
+	var clause string
 	paramVars := make([]interface{}, 0, len(params))
-	for _, param := range params {
-		col := param.Column()
-		if _, ok := cols[col]; !ok {
-			return 0, UnknownColumn(col)
+	if len(params) > 0 {
+		clause = "WHERE "
+		for _, param := range params {
+			col := param.Column()
+			if _, ok := cols[col]; !ok {
+				return 0, UnknownColumn(col)
+			}
+			if first {
+				first = false
+			} else {
+				clause += " AND "
+			}
+			clause += param.Expr()
+			paramVars = append(paramVars, param.Params()...)
 		}
-		if first {
-			first = false
-		} else {
-			clause += " AND "
-		}
-		clause += param.Expr()
-		paramVars = append(paramVars, param.Params()...)
 	}
-	sql := "SELECT count(1) FROM [" + table + "] WHERE " + clause + ";"
+	sql := "SELECT count(1) FROM [" + table + "] " + clause + ";"
 	stmt, err := s.db.Query(sql, paramVars...)
 	if err != nil {
 		return 0, err
@@ -181,14 +193,6 @@ func (s *Store) SearchCount(data Interface, params ...Searcher) (int, error) {
 }
 
 //Errors
-
-// NoParams is an error that occurs when no search parameters are given to
-// Search.
-type NoParams struct{}
-
-func (NoParams) Error() string {
-	return "no search parameters given"
-}
 
 // UnknownColumn is an error that occurrs when a search parameter requires a
 // column which does not exist for the given type.

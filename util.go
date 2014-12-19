@@ -25,6 +25,12 @@ type InterfaceTable interface {
 	TableName() string
 }
 
+type Sort struct {
+	Interface
+	SortBy string
+	Asc    bool
+}
+
 type statement struct {
 	*sqlite3.Stmt
 	vars []string
@@ -39,6 +45,9 @@ func (s statement) Vars(t map[string]interface{}) []interface{} {
 }
 
 func tableName(t Interface) string {
+	if s, ok := t.(Sort); ok {
+		t = s.Interface
+	}
 	if it, ok := t.(InterfaceTable); ok {
 		return it.TableName()
 	}
