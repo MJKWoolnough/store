@@ -31,6 +31,13 @@ type Sort struct {
 	Asc    bool
 }
 
+func NewSort(data []Interface, sortBy string, asc bool) []Interface {
+	if len(data) > 0 {
+		data[0] = Sort{data[0], sortBy, asc}
+	}
+	return data
+}
+
 type statement struct {
 	*sqlite3.Stmt
 	vars []string
