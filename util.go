@@ -25,15 +25,15 @@ type InterfaceTable interface {
 	TableName() string
 }
 
-type Sort struct {
+type sort struct {
 	Interface
-	SortBy string
-	Asc    bool
+	sortBy string
+	asc    bool
 }
 
-func NewSort(data []Interface, sortBy string, asc bool) []Interface {
+func Sort(data []Interface, sortBy string, asc bool) []Interface {
 	if len(data) > 0 {
-		data[0] = Sort{data[0], sortBy, asc}
+		data[0] = sort{data[0], sortBy, asc}
 	}
 	return data
 }
@@ -52,7 +52,7 @@ func (s statement) Vars(t map[string]interface{}) []interface{} {
 }
 
 func tableName(t Interface) string {
-	if s, ok := t.(Sort); ok {
+	if s, ok := t.(sort); ok {
 		t = s.Interface
 	}
 	if it, ok := t.(InterfaceTable); ok {

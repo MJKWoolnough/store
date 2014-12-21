@@ -124,9 +124,9 @@ func (s *Store) Search(data []Interface, offset int, params ...Searcher) (int, e
 		}
 	}
 	var sortBy, dir string
-	if s, ok := data[0].(Sort); ok {
-		sortBy = s.SortBy
-		if s.Asc {
+	if s, ok := data[0].(sort); ok {
+		sortBy = s.sortBy
+		if s.asc {
 			dir = "ASC"
 		} else {
 			dir = "DESC"
