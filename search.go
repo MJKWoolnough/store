@@ -58,6 +58,27 @@ func (l like) Column() string {
 	return l.col
 }
 
+type notLike struct {
+	col, notLikeStr string
+}
+
+// NotLike returns a Searcher that excludes results with similar strings
+func NotLike(column, notLikeStr string) Searcher {
+	return notLike{column, notLikeStr}
+}
+
+func (n notLike) Expr() string {
+	return "[" + n.col + "] NOT LIKE ?"
+}
+
+func (n notLike) Params() []interface{} {
+	return []interface{}{n.notLikeStr}
+}
+
+func (n notLike) Column() string {
+	return n.col
+}
+
 type matchString struct {
 	col, match string
 }
