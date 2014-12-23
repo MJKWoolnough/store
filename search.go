@@ -83,7 +83,7 @@ type matchString struct {
 	col, match string
 }
 
-// MatchString searches for an exact string match on the given column
+// MatchString searches for an exact (case-insensitive) string match on the given column
 func MatchString(column, match string) Searcher {
 	return matchString{column, match}
 }
