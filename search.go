@@ -100,6 +100,28 @@ func (m matchString) Column() string {
 	return m.col
 }
 
+type matchInt struct {
+	col   string
+	match int
+}
+
+// MatchInt searches for an exact integer match on the given column
+func MatchInt(column string, match int) Searcher {
+	return matchInt{column, match}
+}
+
+func (m matchInt) Expr() string {
+	return "[" + m.col + "] = ?"
+}
+
+func (m matchInt) Params() []interface{} {
+	return []interface{}{m.match}
+}
+
+func (m matchInt) Column() string {
+	return m.col
+}
+
 //
 
 // Search is used for a custom (non primary key) search on a table.
