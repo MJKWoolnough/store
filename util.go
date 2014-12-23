@@ -31,6 +31,7 @@ type sort struct {
 	asc    bool
 }
 
+// Sort provides a way to sort the data by a specific column
 func Sort(data []Interface, sortBy string, asc bool) []Interface {
 	if len(data) > 0 {
 		data[0] = sort{data[0], sortBy, asc}
