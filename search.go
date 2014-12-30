@@ -115,7 +115,7 @@ func (o or) Expr() string {
 		}
 		expr += searcher.Expr()
 	}
-	expr = +" )"
+	expr += " )"
 	return expr
 }
 
