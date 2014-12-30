@@ -122,6 +122,35 @@ func (m matchInt) Column() string {
 	return m.col
 }
 
+type or []Searcher
+
+func Or(searchers ...Searcher) Searcher {
+	return or(searchers)
+}
+
+func (o or) Expr() string {
+	expr := ""
+	for n, searcher := range o {
+		if n > 0 {
+			expr += " OR "
+		}
+		expr += searcher.Expr()
+	}
+	return expr
+}
+
+func (o or) Params() []interface{} {
+	p := make([]interface{}, 0, len(o))
+	for _, searcher := range o {
+		p = append(p, searcher.Params())
+	}
+	return p
+}
+
+func (o or) Column() string {
+	return o[0].Column()
+}
+
 //
 
 // Search is used for a custom (non primary key) search on a table.
