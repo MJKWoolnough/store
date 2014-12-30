@@ -127,6 +127,34 @@ func (o or) Params() []interface{} {
 	return p
 }
 
+type and []Searcher
+
+// And returns a Search that matches all of the given searches. Useful for
+// within an Or Searcher
+func And(searchers ...Searcher) Searcher {
+	return and(searchers)
+}
+
+func (a and) Expr() string {
+	expr := "( "
+	for n, searcher := range a {
+		if n > 0 {
+			expr += " AND "
+		}
+		expr += searcher.Expr()
+	}
+	expr += " )"
+	return expr
+}
+
+func (a and) Params() []interface{} {
+	p := make([]interface{}, 0, len(a))
+	for _, searcher := range a {
+		p = append(p, searcher.Params())
+	}
+	return p
+}
+
 // Search is used for a custom (non primary key) search on a table.
 //
 // Returns the number of items found and an error if any occurred.
