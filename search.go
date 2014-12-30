@@ -102,6 +102,7 @@ func (m matchInt) Params() []interface{} {
 
 type or []Searcher
 
+// Or returns a Searcher that matches for any of the given searchers
 func Or(searchers ...Searcher) Searcher {
 	return or(searchers)
 }
