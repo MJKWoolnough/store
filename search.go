@@ -8,8 +8,6 @@ type Searcher interface {
 	Expr() string
 	// params returns the required parameters for the sqlite snippet.
 	Params() []interface{}
-	// column returns the column name in the table
-	Column() string
 }
 
 // between is a searcher which searches for values between (inclusive) the
@@ -32,10 +30,6 @@ func (b between) Params() []interface{} {
 	return []interface{}{b.from, b.to}
 }
 
-func (b between) Column() string {
-	return b.col
-}
-
 // like implements a search which uses the LIKE syntax in a WHERE clause.
 type like struct {
 	col, likeStr string
@@ -52,10 +46,6 @@ func (l like) Expr() string {
 
 func (l like) Params() []interface{} {
 	return []interface{}{l.likeStr}
-}
-
-func (l like) Column() string {
-	return l.col
 }
 
 type notLike struct {
@@ -75,10 +65,6 @@ func (n notLike) Params() []interface{} {
 	return []interface{}{n.notLikeStr}
 }
 
-func (n notLike) Column() string {
-	return n.col
-}
-
 type matchString struct {
 	col, match string
 }
@@ -94,10 +80,6 @@ func (m matchString) Expr() string {
 
 func (m matchString) Params() []interface{} {
 	return []interface{}{m.match}
-}
-
-func (m matchString) Column() string {
-	return m.col
 }
 
 type matchInt struct {
@@ -116,10 +98,6 @@ func (m matchInt) Expr() string {
 
 func (m matchInt) Params() []interface{} {
 	return []interface{}{m.match}
-}
-
-func (m matchInt) Column() string {
-	return m.col
 }
 
 type or []Searcher
@@ -146,12 +124,6 @@ func (o or) Params() []interface{} {
 	}
 	return p
 }
-
-func (o or) Column() string {
-	return o[0].Column()
-}
-
-//
 
 // Search is used for a custom (non primary key) search on a table.
 //
@@ -182,10 +154,6 @@ func (s *Store) Search(data []Interface, offset int, params ...Searcher) (int, e
 		clause = "WHERE "
 		first = true
 		for _, param := range params {
-			col := param.Column()
-			if _, ok := cols[col]; !ok {
-				return 0, UnknownColumn(col)
-			}
 			if first {
 				first = false
 			} else {
@@ -231,17 +199,12 @@ func (s *Store) SearchCount(data Interface, params ...Searcher) (int, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	table := tableName(data)
-	cols := data.Get()
 	first := true
 	var clause string
 	paramVars := make([]interface{}, 0, len(params))
 	if len(params) > 0 {
 		clause = "WHERE "
 		for _, param := range params {
-			col := param.Column()
-			if _, ok := cols[col]; !ok {
-				return 0, UnknownColumn(col)
-			}
 			if first {
 				first = false
 			} else {
