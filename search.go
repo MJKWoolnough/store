@@ -108,13 +108,14 @@ func Or(searchers ...Searcher) Searcher {
 }
 
 func (o or) Expr() string {
-	expr := ""
+	expr := "( "
 	for n, searcher := range o {
 		if n > 0 {
 			expr += " OR "
 		}
 		expr += searcher.Expr()
 	}
+	expr = +" )"
 	return expr
 }
 
