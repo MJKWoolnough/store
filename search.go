@@ -122,7 +122,7 @@ func (o or) Expr() string {
 func (o or) Params() []interface{} {
 	p := make([]interface{}, 0, len(o))
 	for _, searcher := range o {
-		p = append(p, searcher.Params())
+		p = append(p, searcher.Params()...)
 	}
 	return p
 }
@@ -150,7 +150,7 @@ func (a and) Expr() string {
 func (a and) Params() []interface{} {
 	p := make([]interface{}, 0, len(a))
 	for _, searcher := range a {
-		p = append(p, searcher.Params())
+		p = append(p, searcher.Params()...)
 	}
 	return p
 }
