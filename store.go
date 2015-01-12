@@ -150,25 +150,25 @@ func (s *Store) Set(ts ...Interface) (id int, err error) {
 			primary = *v
 		} else {
 			err = WrongKeyType{}
-			return
+			return id, err
 		}
 		if primary == 0 {
 			stmt := s.statements[table][add]
 			err = stmt.Exec(unPointers(stmt.Vars(vars))...)
 			if err != nil {
-				return
+				return id, err
 			}
 			id = int(s.db.LastInsertId())
 		} else {
 			stmt := s.statements[table][update]
 			err = stmt.Exec(unPointers(stmt.Vars(vars))...)
 			if err != nil {
-				return
+				return id, err
 			}
 			id = primary
 		}
 	}
-	return
+	return id, err
 }
 
 // Get will retrieve the data from the database. The instances of Interface do
