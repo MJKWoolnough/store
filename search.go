@@ -30,6 +30,74 @@ func (b between) Params() []interface{} {
 	return []interface{}{b.from, b.to}
 }
 
+type greaterThan struct {
+	col string
+	gt  int
+}
+
+func GreaterThan(column string, gt int) Searcher {
+	return greaterThan{column, gt}
+}
+
+func (g greaterThan) Expr() string {
+	return "[" + g.col + "] > ?"
+}
+
+func (g greaterThan) Params() []interface{} {
+	return []interface{}{g.gt}
+}
+
+type lessThan struct {
+	col string
+	lt  int
+}
+
+func LessThan(column string, lt int) Searcher {
+	return lessThan{column, lt}
+}
+
+func (l lessThan) Expr() string {
+	return "[" + l.col + "] < ?"
+}
+
+func (l lessThan) Params() []interface{} {
+	return []interface{}{l.lt}
+}
+
+type greaterThanEqual struct {
+	col string
+	gt  int
+}
+
+func GreaterThanEqual(column string, gt int) Searcher {
+	return greaterThanEqual{column, gt}
+}
+
+func (g greaterThanEqual) Expr() string {
+	return "[" + g.col + "] >= ?"
+}
+
+func (g greaterThanEqual) Params() []interface{} {
+	return []interface{}{g.gt}
+}
+
+type lessThanEqual struct {
+	col string
+	lt  int
+}
+
+func LessThanEqual(column string, lt int) Searcher {
+	return lessThanEqual{column, lt}
+}
+
+func (l lessThanEqual) Expr() string {
+	return "[" + l.col + "] <= ?"
+}
+
+func (l lessThanEqual) Params() []interface{} {
+	return []interface{}{l.lt}
+}
+
 // like implements a search which uses the LIKE syntax in a WHERE clause.
 type like struct {
 	col, likeStr string
