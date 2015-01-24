@@ -30,11 +30,15 @@ func (b between) Params() []interface{} {
 	return []interface{}{b.from, b.to}
 }
 
+// greaterThan is a searcher which searches for ints greater than the given
+// value
 type greaterThan struct {
 	col string
 	gt  int
 }
 
+// GreaterThan returns a Searcher that looks for an integer greater than the
+// given value
 func GreaterThan(column string, gt int) Searcher {
 	return greaterThan{column, gt}
 }
@@ -47,11 +51,14 @@ func (g greaterThan) Params() []interface{} {
 	return []interface{}{g.gt}
 }
 
+// lessThan is a searcher which searches for ints less than the given value
 type lessThan struct {
 	col string
 	lt  int
 }
 
+// LessThan returns a Searcher that looks for an integer less than the given
+// value
 func LessThan(column string, lt int) Searcher {
 	return lessThan{column, lt}
 }
@@ -64,11 +71,15 @@ func (l lessThan) Params() []interface{} {
 	return []interface{}{l.lt}
 }
 
+// greaterThanEqual is a searcher which searches for ints greater than, or
+// equal to, the given value
 type greaterThanEqual struct {
 	col string
 	gt  int
 }
 
+// GreaterThanEqual returns a Searcher that looks for an integer greater than,
+// or equal to, the given value
 func GreaterThanEqual(column string, gt int) Searcher {
 	return greaterThanEqual{column, gt}
 }
@@ -81,11 +92,15 @@ func (g greaterThanEqual) Params() []interface{} {
 	return []interface{}{g.gt}
 }
 
+// lessThanEqual is a searcher which searches for ints less than, or equal to,
+// the given value
 type lessThanEqual struct {
 	col string
 	lt  int
 }
 
+// LessThanEqual returns a Searcher that looks for an integer less than, or
+// equal to, the given value
 func LessThanEqual(column string, lt int) Searcher {
 	return lessThanEqual{column, lt}
 }
