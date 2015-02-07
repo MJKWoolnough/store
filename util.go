@@ -101,6 +101,8 @@ func unPointer(i interface{}) interface{} {
 		return *v
 	case *[]byte:
 		return *v
+	case *time.Time:
+		return *v
 	default:
 		return nil
 	}
