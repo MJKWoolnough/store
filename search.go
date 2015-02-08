@@ -183,6 +183,23 @@ func (m matchInt) Params() []interface{} {
 	return []interface{}{m.match}
 }
 
+type notMatchInt struct {
+	col      string
+	notMatch int
+}
+
+func NotMatchInt(column string, notMatch int) Searcher {
+	return notMatchInt{column, notMatch}
+}
+
+func (n notMatchInt) Expr() string {
+	return "[" + n.col + "] = ?"
+}
+
+func (n notMatchInt) Params() []interface{} {
+	return []interface{}{n.notMatch}
+}
+
 type or []Searcher
 
 // Or returns a Searcher that matches for any of the given searchers
