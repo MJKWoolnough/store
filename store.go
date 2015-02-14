@@ -48,6 +48,11 @@ func (s *Store) Register(t Interface) error {
 	defer s.mutex.Unlock()
 
 	table := tableName(t)
+
+	if _, ok := s.statements[table]; ok {
+		return nil
+	}
+
 	tVars := t.Get()
 
 	var sqlVars, sqlParams, setSQLParams, tableVars string
