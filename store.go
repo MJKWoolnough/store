@@ -2,10 +2,13 @@
 package store
 
 import (
+	"database/sql"
+	"errors"
 	"io"
+	"reflect"
 	"sync"
 
-	"github.com/mxk/go-sqlite/sqlite3"
+	_ "github.com/mxk/go-sqlite/sqlite3"
 )
 
 const (
@@ -19,14 +22,15 @@ const (
 
 // Store is a instance of a sqlite3 connection and numerous prepared statements
 type Store struct {
-	db         *sqlite3.Conn
+	db         *sql.DB
 	mutex      sync.Mutex
 	statements map[string][]statement
+	types      map[string]typeInfo
 }
 
-// NewStore takes the filename of a new or existing sqlite3 database
-func NewStore(filename string) (*Store, error) {
-	s, err := sqlite3.Open(filename)
+// New takes the filename of a new or existing sqlite3 database
+func New(driverName, dataSourceName string) (*Store, error) {
+	s, err := sql.Open(driverName, dataSourceName)
 	if err != nil {
 		return nil, err
 	}
@@ -36,14 +40,35 @@ func NewStore(filename string) (*Store, error) {
 	}, nil
 }
 
+type typeInfo struct {
+	key    int
+	fields []fieldInfo
+}
+
+type fieldInfo struct {
+	pointer bool
+	name    string
+	pos     []int
+}
+
 // Close closes the sqlite3 database
 func (s *Store) Close() error {
-	return s.db.Close()
+	err := s.db.Close()
+	s.db = nil
+	return err
 }
 
 // Register allows a type to be registered with the store, creating the table if
 // it does not already exists and prepares the common statements.
-func (s *Store) Register(t Interface) error {
+func (s *Store) Register(t interface{}) error {
+	if s.db == nil {
+		return Closed
+	}
+	p := reflect.ValueOf(t)
+	if p.Kind() != reflect.Pointer || p.Elem().Kind() != reflect.Struct {
+		return NotPointerStruct
+	}
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -52,23 +77,65 @@ func (s *Store) Register(t Interface) error {
 	if _, ok := s.statements[table]; ok {
 		return nil
 	}
+	s.statements[table] = make([]statement, 6)
+	if err := s.parseType(t); err != nil {
+		return err
+	}
+	if err := s.makeStatements(table); err != nil {
+		return err
+	}
+	return nil
+}
 
-	tVars := t.Get()
+func (s *Store) parseType(t interface{}) error {
+	typ := p.Elem().Type()
+	for i := 0; i < typ.NumField(); i++ {
+		if f := typ.Field(i); f.PkgPath == "" {
+			name := f.Name
+			if tag := f.Tag.Get("store"); tag == "-" {
+				continue
+			} else if tag != "" {
+				name = tag
+			}
+			if q := p.Elem().Field(i); q.Kind() == reflect.Ptr && q.Elem().Kind() == reflect.Struct {
+				d := q.Elem().Interface()
+				if err := s.Register(d); err != nil {
+					return err
+				}
+				tmp := s.types[tableName(d)]
+				tmpVal := tmp.fields[tmp.key]
+				pos := make([]int, 1, len(tmpVal.pos)+1)
+				pos[0] = i
+				pos = append(pos, tmpVal.pos...)
+				fieldInfo{
+					tmpVal.pointer,
+					name,
+					pos,
+				}
+			} else {
 
-	var sqlVars, sqlParams, setSQLParams, tableVars string
-	vars := make([]string, 0, len(tVars))
+			}
+		}
+	}
 
+	return nil
+}
+
+func (s *Store) makeStatements(table string) error {
+	typ := s.types[table]
 	first := true
+	primary := typ.fields[typ.key].name
 	oFirst := true
-	primary := t.Key()
 
-	for typeName, typeVal := range tVars {
+	var tableVars, sqlVars, setSQLParams, sqlParams string
+
+	for n, field := range typ.fields {
 		if first {
 			first = false
 		} else {
 			tableVars += ", "
 		}
-		if primary != typeName {
+		if typ.key != n {
 			if oFirst {
 				oFirst = false
 			} else {
@@ -77,15 +144,13 @@ func (s *Store) Register(t Interface) error {
 				sqlParams += ", "
 			}
 		}
-		varType := getType(typeVal)
 		tableVars += "[" + typeName + "] " + varType
-		if primary == typeName {
+		if n == typ.key {
 			tableVars += " PRIMARY KEY AUTOINCREMENT"
 		} else {
 			sqlVars += "[" + typeName + "]"
 			setSQLParams += "[" + typeName + "] = ?"
 			sqlParams += "?"
-			vars = append(vars, typeName)
 		}
 	}
 	pVars := append(vars, primary)
@@ -94,7 +159,6 @@ func (s *Store) Register(t Interface) error {
 	if err != nil {
 		return err
 	}
-	s.statements[table] = make([]statement, 6)
 
 	sql = "INSERT INTO [" + table + "] (" + sqlVars + ") VALUES (" + sqlParams + ");"
 	stmt, err := s.db.Prepare(sql)
@@ -154,7 +218,7 @@ func (s *Store) Set(ts ...Interface) (id int, err error) {
 		if v, ok := p.(*int); ok {
 			primary = *v
 		} else {
-			err = WrongKeyType{}
+			err = WrongKeyType
 			return id, err
 		}
 		if primary == 0 {
@@ -268,12 +332,18 @@ func (s *Store) Count(t Interface) (int, error) {
 
 //Errors
 
-// WrongKeyType is an error given when the primary key is not of type int.
-type WrongKeyType struct{}
+var (
+	// Closed is an error given when trying to perform an operation on a
+	// closed database connection
+	Closed = errors.New("database is closed")
 
-func (WrongKeyType) Error() string {
-	return "primary key needs to be int"
-}
+	// WrongKeyType is an error given when the primary key is not of type int.
+	WrongKeyType = errors.New("primary key needs to be int")
+
+	// NotStruct is an error given when a Register is given something other
+	// than a struct
+	NotStruct = errors.New("expecting a struct type")
+)
 
 // UnmatchedType is an error given when an instance of Interface does not match
 // a previous instance.
