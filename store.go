@@ -62,13 +62,14 @@ func (s *Store) defineType(i interface{}) error {
 		return nil
 	}
 
+	s.types[name] = typeInfo{}
+
 	v := reflect.ValueOf(i).Elem()
 	numFields := v.Type().NumField()
 	fields := make([]field, 0, numFields)
 	id := 0
 	idType := 0
 
-	toDefine := make([]interface{}, 0)
 	for n := 0; n < numFields; n++ {
 		f := v.Type().Field(n)
 		if f.PkgPath != "" { // not exported
@@ -89,7 +90,7 @@ func (s *Store) defineType(i interface{}) error {
 			iface = v.Field(n).Addr().Interface()
 		}
 		if isPointerStruct(iface) {
-			toDefine = append(toDefine, iface)
+			s.defineType(iface)
 		} else if !isValidType(iface) {
 			continue
 		}
@@ -116,11 +117,6 @@ func (s *Store) defineType(i interface{}) error {
 	}
 	s.types[name] = typeInfo{
 		primary: id,
-	}
-	for _, t := range toDefine {
-		if err := s.defineType(t); err != nil {
-			return err
-		}
 	}
 
 	// create statements
