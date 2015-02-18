@@ -11,20 +11,14 @@ import (
 
 type field struct {
 	name      string
-	pos       []int
+	pos       int
 	isPointer bool
-}
-
-type statement struct {
-	*sql.Stmt
-	in  []int
-	out []int
 }
 
 type typeInfo struct {
 	primary    int
 	fields     []field
-	statements []statement
+	statements []*sql.Stmt
 }
 
 type Store struct {
@@ -74,11 +68,7 @@ func (s *Store) defineType(i interface{}) error {
 	id := 0
 	idType := 0
 
-	type tR struct {
-		i interface{}
-		n int
-	}
-	toRegister := make([]tR, 0)
+	toRegister := make([]interface{}, 0)
 	for n := 0; n < numFields; n++ {
 		f := v.Type().Field(n)
 		if f.PkgPath != "" { // not exported
@@ -98,33 +88,31 @@ func (s *Store) defineType(i interface{}) error {
 		} else {
 			iface = v.Field(n).Addr().Interface()
 		}
-		if isValidKeyType(iface) {
-			if idType < 3 && f.Tag.Get("key") == "1" {
-				idType = 3
-				id = n
-			} else if idType < 2 && strings.ToLower(fieldName) == "id" {
-				idType = 2
-				id = n
-			} else if idType < 1 {
-				idType = 1
-				id = n
-			}
-		}
-		pos := make([]int, 1, 2)
-		pos[0] = n
 		if isPointerStruct(iface) {
-			toRegister = append(toRegister, tR{
-				iface,
-				len(fields),
-			})
+			toRegister = append(toRegister, iface)
 		} else if !isValidType(iface) {
 			continue
 		}
+		if isValidKeyType(iface) {
+			if idType < 3 && f.Tag.Get("key") == "1" {
+				idType = 3
+				id = len(fields)
+			} else if idType < 2 && strings.ToLower(fieldName) == "id" {
+				idType = 2
+				id = len(fields)
+			} else if idType < 1 {
+				idType = 1
+				id = len(fields)
+			}
+		}
 		fields = append(fields, field{
 			fieldName,
-			pos,
+			n,
 			isPointer,
 		})
+	}
+	if idType == 0 {
+		return NoKey
 	}
 	s.types[name] = typeInfo{
 		primary: id,
@@ -133,16 +121,17 @@ func (s *Store) defineType(i interface{}) error {
 		if err := s.defineType(t.i); err != nil {
 			return err
 		}
-
-		fields[t.n].pos = append(fields[t.n].pos, s.types[typeName(t.i)].primary)
-	}
-	s.types[name] = typeInfo{
-		primary: id,
-		fields:  fields,
 	}
 
 	// create statements
 
+	statements := make([]statement, 6)
+
+	s.types[name] = typeInfo{
+		primary:    id,
+		fields:     fields,
+		statements: statements,
+	}
 	return nil
 }
 
@@ -178,4 +167,5 @@ func typeName(i interface{}) string {
 var (
 	DBClosed        = errors.New("database already closed")
 	NoPointerStruct = errors.New("given variable is not a pointer to a struct")
+	NoKey           = errors.New("could not determine key")
 )
