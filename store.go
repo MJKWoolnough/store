@@ -4,9 +4,9 @@ package store
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 )
 
 type field struct {
@@ -30,6 +30,7 @@ type typeInfo struct {
 type Store struct {
 	db    *sql.DB
 	types map[string]typeInfo
+	mutex sync.Mutex
 }
 
 func New(db *sql.DB) *Store {
@@ -53,13 +54,16 @@ func isPointerStruct(i interface{}) bool {
 func (s *Store) Register(i interface{}) error {
 	if s.db == nil {
 		return DBClosed
-	}
-	if !isPointerStruct(i) {
+	} else if !isPointerStruct(i) {
 		return NoPointerStruct
 	}
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	return s.defineType(i)
+}
 
+func (s *Store) defineType(i interface{}) error {
 	name := typeName(i)
-	fmt.Println("Processing", name)
 	if _, ok := s.types[name]; ok {
 		return nil
 	}
@@ -69,6 +73,12 @@ func (s *Store) Register(i interface{}) error {
 	fields := make([]field, 0, numFields)
 	id := 0
 	idType := 0
+
+	type tR struct {
+		i interface{}
+		n int
+	}
+	toRegister := make([]tR, 0)
 	for n := 0; n < numFields; n++ {
 		f := v.Type().Field(n)
 		if f.PkgPath != "" { // not exported
@@ -103,11 +113,10 @@ func (s *Store) Register(i interface{}) error {
 		pos := make([]int, 1, 2)
 		pos[0] = n
 		if isPointerStruct(iface) {
-			err := s.Register(iface)
-			if err != nil {
-				return nil
-			}
-			pos = append(pos, s.types[typeName(iface)].primary)
+			toRegister = append(toRegister, tR{
+				iface,
+				len(fields),
+			})
 		} else if !isValidType(iface) {
 			continue
 		}
@@ -116,14 +125,24 @@ func (s *Store) Register(i interface{}) error {
 			pos,
 			isPointer,
 		})
-		fmt.Println(fields[len(fields)-1])
 	}
 	s.types[name] = typeInfo{
-		id,
-		fields,
-		nil,
+		primary: id,
 	}
-	fmt.Println(s.types[name])
+	for _, t := range toRegister {
+		if err := s.defineType(t.i); err != nil {
+			return err
+		}
+
+		fields[t.n].pos = append(fields[t.n].pos, s.types[typeName(t.i)].primary)
+	}
+	s.types[name] = typeInfo{
+		primary: id,
+		fields:  fields,
+	}
+
+	// create statements
+
 	return nil
 }
 
