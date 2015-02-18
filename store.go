@@ -68,7 +68,7 @@ func (s *Store) defineType(i interface{}) error {
 	id := 0
 	idType := 0
 
-	toRegister := make([]interface{}, 0)
+	toDefine := make([]interface{}, 0)
 	for n := 0; n < numFields; n++ {
 		f := v.Type().Field(n)
 		if f.PkgPath != "" { // not exported
@@ -89,7 +89,7 @@ func (s *Store) defineType(i interface{}) error {
 			iface = v.Field(n).Addr().Interface()
 		}
 		if isPointerStruct(iface) {
-			toRegister = append(toRegister, iface)
+			toDefine = append(toDefine, iface)
 		} else if !isValidType(iface) {
 			continue
 		}
@@ -117,15 +117,15 @@ func (s *Store) defineType(i interface{}) error {
 	s.types[name] = typeInfo{
 		primary: id,
 	}
-	for _, t := range toRegister {
-		if err := s.defineType(t.i); err != nil {
+	for _, t := range toDefine {
+		if err := s.defineType(t); err != nil {
 			return err
 		}
 	}
 
 	// create statements
 
-	statements := make([]statement, 6)
+	statements := make([]*sql.Stmt, 6)
 
 	s.types[name] = typeInfo{
 		primary:    id,
