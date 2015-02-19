@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 )
 
 type field struct {
@@ -120,6 +121,36 @@ func (s *Store) defineType(i interface{}) error {
 	}
 
 	// create statements
+	var (
+		sqlVars, sqlParams, setSQLParams, tableVars string
+		doneFirst, doneFirstNonKey                  bool
+	)
+
+	for pos, f := range fields {
+		if doneFirst {
+			tableVars += ", "
+		} else {
+			doneFirst = true
+		}
+		if pos != id {
+			if doneFirstNonKey {
+				sqlVars += ", "
+				sqlSetParams += ", "
+				sqlParams += ", "
+			} else {
+				doneFirstNonKey = true
+			}
+		}
+		varType := getType(i, pos)
+		tableVars += "[" + f.name + "] " + varType
+		if pos == id {
+			tableVars += " PRIMARY KEY AUTOINCREMENT"
+		} else {
+			sqlVars += "[" + f.name + "]"
+			setSQLParams += "[" + typeName + "] = ?"
+			sqlParams += "?"
+		}
+	}
 
 	statements := make([]*sql.Stmt, 6)
 
@@ -131,11 +162,60 @@ func (s *Store) defineType(i interface{}) error {
 	return nil
 }
 
+func getFieldPointer(i interface{}, fieldNum int) interface{} {
+	v := reflect.ValueOf(i)
+	if v.NumField() < fieldNum {
+		return nil
+	}
+	if v.Type().Field(fieldNum).PkgPath != "" {
+		return nil
+	}
+	f := v.Field(fieldNum)
+	if f.Kind() == reflect.Ptr {
+		return f.Interface()
+	}
+	return f.Addr().Interface()
+}
+
+func getField(i interface{}, fieldNum int) interface{} {
+	v := reflect.ValueOf(i)
+	if v.NumField() < fieldNum {
+		return nil
+	}
+	if v.Type().Field(fieldNum).PkgPath != "" {
+		return nil
+	}
+	f := v.Field(fieldNum)
+	if f.Kind() == reflect.Ptr {
+		return f.Elem().Interface()
+	}
+	return f.Interface()
+}
+
+func getType(i interface{}, fieldNum int) string {
+	v := getFieldPointer(i, fieldNum)
+	if v == nil {
+		return ""
+	}
+	switch v.(type) {
+	case *int, *int8, *int16, *int32, *int64,
+		*uint, *uint8, *uint16, *uint32, *uint64, *time.Time:
+		return "INTEGER"
+	case *float32, *float64:
+		return "FLOAT"
+	case *string:
+		return "TEXT"
+	case *[]byte:
+		return "BLOB"
+	}
+	return ""
+}
+
 func isValidType(i interface{}) bool {
 	switch i.(type) {
 	case *int, *int8, *int16, *int32, *int64,
 		*uint, *uint8, *uint16, *uint32, *uint64,
-		*string, *float32, *float64, *bool:
+		*string, *float32, *float64, *bool, *time.Time:
 		return true
 	}
 	return false
