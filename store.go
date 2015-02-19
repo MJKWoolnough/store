@@ -37,11 +37,15 @@ type Store struct {
 	mutex sync.Mutex
 }
 
-func New(db *sql.DB) *Store {
+func New(driverName, dataSourceName string) (*Store, error) {
+	db, err := sql.Open(driverName, dataSourceName)
+	if err != nil {
+		return nil, err
+	}
 	return &Store{
 		db:    db,
 		types: make(map[string]typeInfo),
-	}
+	}, nil
 }
 
 func (s *Store) Close() error {
