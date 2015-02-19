@@ -10,6 +10,15 @@ import (
 	"time"
 )
 
+const (
+	add = iota
+	get
+	update
+	remove
+	getPage
+	count
+)
+
 type field struct {
 	name      string
 	pos       int
@@ -159,6 +168,54 @@ func (s *Store) defineType(i interface{}) error {
 	}
 
 	statements := make([]*sql.Stmt, 6)
+
+	sql := "CREATE TABLE IF NOT EXISTS [" + name + "](" + tableVars + ");"
+	err := s.db.Exec(sql)
+	if err != nil {
+		return err
+	}
+
+	sql = "INSERT INTO [" + table + "] (" + sqlVars + ") VALUES (" + sqlParams + ");"
+	stmt, err := s.db.Prepare(sql)
+	if err != nil {
+		return err
+	}
+	s.statements[table][add] = stmt
+
+	sql = "SELECT " + sqlVars + " FROM [" + table + "] WHERE [" + primary + "] = ? LIMIT 1;"
+	stmt, err = s.db.Prepare(sql)
+	if err != nil {
+		return err
+	}
+	s.statements[table][get] = stmt
+
+	sql = "UPDATE [" + table + "] SET " + setSQLParams + " WHERE [" + primary + "] = ?;"
+	stmt, err = s.db.Prepare(sql)
+	if err != nil {
+		return err
+	}
+	s.statements[table][update] = stmt
+
+	sql = "DELETE FROM [" + table + "] WHERE [" + primary + "] = ?;"
+	stmt, err = s.db.Prepare(sql)
+	if err != nil {
+		return err
+	}
+	s.statements[table][remove] = stmt
+
+	sql = "SELECT " + sqlVars + ", [" + primary + "] FROM [" + table + "] ORDER BY [" + primary + "] LIMIT ? OFFSET ?;"
+	stmt, err = s.db.Prepare(sql)
+	if err != nil {
+		return err
+	}
+	s.statements[table][getPage] = stmt
+
+	sql = "SELECT COUNT(1) FROM [" + table + "];"
+	stmt, err = s.db.Prepare(sql)
+	if err != nil {
+		return err
+	}
+	s.statements[table][count] = stmt
 
 	s.types[name] = typeInfo{
 		primary:    id,
