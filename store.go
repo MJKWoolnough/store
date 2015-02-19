@@ -83,6 +83,12 @@ func (s *Store) defineType(i interface{}) error {
 		if fieldName == "-" { // Skip field
 			continue
 		}
+		tmp := strings.ToLower(fieldName)
+		for _, tf := range fields {
+			if strings.ToLower(tf.name) == tmp {
+				return DuplicateColumn
+			}
+		}
 		isPointer := f.Type.Kind() == reflect.Ptr
 		var iface interface{}
 		if isPointer {
@@ -244,4 +250,5 @@ var (
 	DBClosed        = errors.New("database already closed")
 	NoPointerStruct = errors.New("given variable is not a pointer to a struct")
 	NoKey           = errors.New("could not determine key")
+	DuplicateColumn = errors.New("duplicate column name found")
 )
