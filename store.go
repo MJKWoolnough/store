@@ -261,8 +261,7 @@ func getType(i interface{}, fieldNum int) string {
 		return ""
 	}
 	switch v.(type) {
-	case *int, *int8, *int16, *int32, *int64,
-		*uint, *uint8, *uint16, *uint32, *uint64, *time.Time:
+	case *int, *int64, *time.Time:
 		return "INTEGER"
 	case *float32, *float64:
 		return "FLOAT"
@@ -276,8 +275,7 @@ func getType(i interface{}, fieldNum int) string {
 
 func isValidType(i interface{}) bool {
 	switch i.(type) {
-	case *int, *int8, *int16, *int32, *int64,
-		*uint, *uint8, *uint16, *uint32, *uint64,
+	case *int, *int64,
 		*string, *float32, *float64, *bool, *time.Time:
 		return true
 	}
@@ -286,8 +284,7 @@ func isValidType(i interface{}) bool {
 
 func isValidKeyType(i interface{}) bool {
 	switch i.(type) {
-	case *int, *int8, *int16, *int32, *int64,
-		*uint, *uint8, *uint16, *uint32, *uint64:
+	case *int, *int64:
 		return true
 	}
 	return false
