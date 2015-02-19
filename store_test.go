@@ -3,6 +3,8 @@ package store
 import (
 	"database/sql"
 	"testing"
+
+	_ "github.com/mxk/go-sqlite/sqlite3"
 )
 
 type TestType2 struct {
@@ -23,6 +25,12 @@ type TestType1 struct {
 }
 
 func TestRegister(t *testing.T) {
-	s := New(new(sql.DB))
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	defer db.Close()
+	s := New(db)
 	s.Register(new(TestType1))
 }

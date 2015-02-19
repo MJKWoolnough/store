@@ -150,7 +150,7 @@ func (s *Store) defineType(i interface{}) error {
 		if pos != id {
 			if doneFirstNonKey {
 				sqlVars += ", "
-				sqlSetParams += ", "
+				setSQLParams += ", "
 				sqlParams += ", "
 			} else {
 				doneFirstNonKey = true
@@ -162,7 +162,7 @@ func (s *Store) defineType(i interface{}) error {
 			tableVars += " PRIMARY KEY AUTOINCREMENT"
 		} else {
 			sqlVars += "[" + f.name + "]"
-			setSQLParams += "[" + typeName + "] = ?"
+			setSQLParams += "[" + f.name + "] = ?"
 			sqlParams += "?"
 		}
 	}
@@ -170,52 +170,52 @@ func (s *Store) defineType(i interface{}) error {
 	statements := make([]*sql.Stmt, 6)
 
 	sql := "CREATE TABLE IF NOT EXISTS [" + name + "](" + tableVars + ");"
-	err := s.db.Exec(sql)
+	_, err := s.db.Exec(sql)
 	if err != nil {
 		return err
 	}
 
-	sql = "INSERT INTO [" + table + "] (" + sqlVars + ") VALUES (" + sqlParams + ");"
+	sql = "INSERT INTO [" + name + "] (" + sqlVars + ") VALUES (" + sqlParams + ");"
 	stmt, err := s.db.Prepare(sql)
 	if err != nil {
 		return err
 	}
-	s.statements[table][add] = stmt
+	statements[add] = stmt
 
-	sql = "SELECT " + sqlVars + " FROM [" + table + "] WHERE [" + primary + "] = ? LIMIT 1;"
+	sql = "SELECT " + sqlVars + " FROM [" + name + "] WHERE [" + fields[id].name + "] = ? LIMIT 1;"
 	stmt, err = s.db.Prepare(sql)
 	if err != nil {
 		return err
 	}
-	s.statements[table][get] = stmt
+	statements[get] = stmt
 
-	sql = "UPDATE [" + table + "] SET " + setSQLParams + " WHERE [" + primary + "] = ?;"
+	sql = "UPDATE [" + name + "] SET " + setSQLParams + " WHERE [" + fields[id].name + "] = ?;"
 	stmt, err = s.db.Prepare(sql)
 	if err != nil {
 		return err
 	}
-	s.statements[table][update] = stmt
+	statements[update] = stmt
 
-	sql = "DELETE FROM [" + table + "] WHERE [" + primary + "] = ?;"
+	sql = "DELETE FROM [" + name + "] WHERE [" + fields[id].name + "] = ?;"
 	stmt, err = s.db.Prepare(sql)
 	if err != nil {
 		return err
 	}
-	s.statements[table][remove] = stmt
+	statements[remove] = stmt
 
-	sql = "SELECT " + sqlVars + ", [" + primary + "] FROM [" + table + "] ORDER BY [" + primary + "] LIMIT ? OFFSET ?;"
+	sql = "SELECT " + sqlVars + ", [" + fields[id].name + "] FROM [" + name + "] ORDER BY [" + fields[id].name + "] LIMIT ? OFFSET ?;"
 	stmt, err = s.db.Prepare(sql)
 	if err != nil {
 		return err
 	}
-	s.statements[table][getPage] = stmt
+	statements[getPage] = stmt
 
-	sql = "SELECT COUNT(1) FROM [" + table + "];"
+	sql = "SELECT COUNT(1) FROM [" + name + "];"
 	stmt, err = s.db.Prepare(sql)
 	if err != nil {
 		return err
 	}
-	s.statements[table][count] = stmt
+	statements[count] = stmt
 
 	s.types[name] = typeInfo{
 		primary:    id,
@@ -226,7 +226,7 @@ func (s *Store) defineType(i interface{}) error {
 }
 
 func getFieldPointer(i interface{}, fieldNum int) interface{} {
-	v := reflect.ValueOf(i)
+	v := reflect.ValueOf(i).Elem()
 	if v.NumField() < fieldNum {
 		return nil
 	}
