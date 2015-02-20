@@ -233,6 +233,23 @@ func (s *Store) defineType(i interface{}) error {
 	return nil
 }
 
+func (s *Store) Count(i interface{}) (int, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	if !isPointerStruct(i) {
+		return 0, NoPointerStruct
+	}
+	name := typeName(i)
+	stmt := s.types[name].statements[count]
+	res, err := stmt.Query()
+	if err != nil {
+		return err
+	}
+	num := 0
+	err = res.Scan(&num)
+	return num, err
+}
+
 // Errors
 
 var (
