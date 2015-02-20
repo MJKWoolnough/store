@@ -159,7 +159,12 @@ func (s *Store) defineType(i interface{}) error {
 				doneFirstNonKey = true
 			}
 		}
-		varType := getType(i, pos)
+		var varType string
+		if isPointerStruct(getFieldPointer(i, f.pos)) {
+			varType = "INTEGER"
+		} else {
+			varType = getType(i, f.pos)
+		}
 		tableVars += "[" + f.name + "] " + varType
 		if pos == id {
 			tableVars += " PRIMARY KEY AUTOINCREMENT"
