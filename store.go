@@ -22,6 +22,7 @@ type field struct {
 	name      string
 	pos       int
 	isPointer bool
+	isStruct  bool
 }
 
 type typeInfo struct {
@@ -108,8 +109,10 @@ func (s *Store) defineType(i interface{}) error {
 		} else {
 			iface = v.Field(n).Addr().Interface()
 		}
+		isStruct := false
 		if isPointerStruct(iface) {
 			s.defineType(iface)
+			isStruct = true
 		} else if !isValidType(iface) {
 			continue
 		}
@@ -129,6 +132,7 @@ func (s *Store) defineType(i interface{}) error {
 			fieldName,
 			n,
 			isPointer,
+			isStruct,
 		})
 	}
 	if idType == 0 {
@@ -160,7 +164,7 @@ func (s *Store) defineType(i interface{}) error {
 			}
 		}
 		var varType string
-		if isPointerStruct(getFieldPointer(i, f.pos)) {
+		if f.isStruct {
 			varType = "INTEGER"
 		} else {
 			varType = getType(i, f.pos)
@@ -233,6 +237,77 @@ func (s *Store) defineType(i interface{}) error {
 	return nil
 }
 
+func (s *Store) Set(is ...interface{}) error {
+	var toSet []interface{}
+	for _, i := range is {
+		t, ok := s.types[typeName(i)]
+		if !ok {
+			return UnregisteredType
+		}
+		toSet = toSet[:0]
+		err := s.Set(i, t, &toSet)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Store) set(i interface{}, t typeInfo, toSet *[]interface{}) error {
+	for _, oi := range *toSet {
+		if oi == i {
+			return nil
+		}
+	}
+	(*toSet) = append(*toSet, i)
+	isUpdate := false
+	id := getField(i, t.fields[t.primary].pos)
+	switch id.(type) {
+	case int:
+		isUpdate = v != 0
+	case int64:
+		isUpdate = v != 0
+	}
+	vars := make([]interface{}, 0, len(t.fields))
+	for pos, f := range t.fields {
+		if pos == t.primary {
+			continue
+		}
+		if f.isStruct {
+			err := s.Set(getFieldPointer(i, f.pos), t, toSet)
+			if err != nil {
+				return err
+			}
+			v := getFieldPointer(i, f.pos)
+			vt := s.types[typeName(v)]
+			vars = append(vars, getField(v, vt.fields[vt.primary].pos))
+		} else {
+			vars = append(vars, getField(i, f.pos))
+		}
+	}
+	if isUpdate {
+		vars = append(vars, id)
+		_, err := t.statements[update].Exec(vars...)
+		return err
+	}
+	r, err := t.statements[add].Exec(vars...)
+	if err != nil {
+		return err
+	}
+	lid, err := r.LastInsertId()
+	if err != nil {
+		return err
+	}
+
+	switch v := getFieldPointer(i, t.fields[t.primary].pos).(type) {
+	case int:
+		*v = int(lid)
+	case int64:
+		*v = lid
+	}
+	return nil
+}
+
 func (s *Store) Count(i interface{}) (int, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -253,8 +328,9 @@ func (s *Store) Count(i interface{}) (int, error) {
 // Errors
 
 var (
-	DBClosed        = errors.New("database already closed")
-	NoPointerStruct = errors.New("given variable is not a pointer to a struct")
-	NoKey           = errors.New("could not determine key")
-	DuplicateColumn = errors.New("duplicate column name found")
+	DBClosed         = errors.New("database already closed")
+	NoPointerStruct  = errors.New("given variable is not a pointer to a struct")
+	NoKey            = errors.New("could not determine key")
+	DuplicateColumn  = errors.New("duplicate column name found")
+	UnregisteredType = errors.New("type not registered")
 )
