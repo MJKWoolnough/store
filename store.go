@@ -245,7 +245,7 @@ func (s *Store) Set(is ...interface{}) error {
 			return UnregisteredType
 		}
 		toSet = toSet[:0]
-		err := s.Set(i, t, &toSet)
+		err := s.Set(i, &t, &toSet)
 		if err != nil {
 			return err
 		}
@@ -253,28 +253,24 @@ func (s *Store) Set(is ...interface{}) error {
 	return nil
 }
 
-func (s *Store) set(i interface{}, t typeInfo, toSet *[]interface{}) error {
+func (s *Store) set(i interface{}, t *typeInfo, toSet *[]interface{}) error {
 	for _, oi := range *toSet {
 		if oi == i {
 			return nil
 		}
 	}
 	(*toSet) = append(*toSet, i)
-	isUpdate := false
-	id := getField(i, t.fields[t.primary].pos)
-	switch id.(type) {
-	case int:
-		isUpdate = v != 0
-	case int64:
-		isUpdate = v != 0
-	}
+	id := t.GetID(i)
+	isUpdate := id != 0
 	vars := make([]interface{}, 0, len(t.fields))
 	for pos, f := range t.fields {
 		if pos == t.primary {
 			continue
 		}
 		if f.isStruct {
-			err := s.Set(getFieldPointer(i, f.pos), t, toSet)
+			ni := getFieldPointer(i, f.pos)
+			nt := s.types[typeName(ni)]
+			err := s.Set(ni, &nt, toSet)
 			if err != nil {
 				return err
 			}
@@ -298,13 +294,7 @@ func (s *Store) set(i interface{}, t typeInfo, toSet *[]interface{}) error {
 	if err != nil {
 		return err
 	}
-
-	switch v := getFieldPointer(i, t.fields[t.primary].pos).(type) {
-	case int:
-		*v = int(lid)
-	case int64:
-		*v = lid
-	}
+	t.SetID(i, lid)
 	return nil
 }
 

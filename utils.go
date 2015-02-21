@@ -77,3 +77,22 @@ func typeName(i interface{}) string {
 	}
 	return name
 }
+
+func (t *typeInfo) GetID(i interface{}) int64 {
+	switch v := getField(i, t.fields[t.primary].pos).(type) {
+	case int:
+		return int64(v)
+	case int64:
+		return v
+	}
+	return 0
+}
+
+func (t *typeInfo) SetID(i interface{}, id int64) {
+	switch v := getFieldPointer(i, t.fields[t.primary].pos).(type) {
+	case *int:
+		*v = int(id)
+	case *int64:
+		*v = id
+	}
+}
