@@ -53,11 +53,6 @@ func (s *Store) Close() error {
 	return err
 }
 
-func isPointerStruct(i interface{}) bool {
-	t := reflect.TypeOf(i)
-	return t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct
-}
-
 func (s *Store) Register(i interface{}) error {
 	if s.db == nil {
 		return DBClosed

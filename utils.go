@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+func isPointerStruct(i interface{}) bool {
+	t := reflect.TypeOf(i)
+	return t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct
+}
+
 func getFieldPointer(i interface{}, fieldNum int) interface{} {
 	v := reflect.ValueOf(i).Elem()
 	if v.NumField() < fieldNum {
