@@ -345,7 +345,7 @@ func (s *Store) Count(i interface{}) (int, error) {
 	stmt := s.types[name].statements[count]
 	res, err := stmt.Query()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	num := 0
 	err = res.Scan(&num)
