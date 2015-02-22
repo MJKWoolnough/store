@@ -19,10 +19,9 @@ const (
 )
 
 type field struct {
-	name      string
-	pos       int
-	isPointer bool
-	isStruct  bool
+	isStruct bool
+	pos      int
+	name     string
 }
 
 type typeInfo struct {
@@ -129,10 +128,9 @@ func (s *Store) defineType(i interface{}) error {
 			}
 		}
 		fields = append(fields, field{
-			fieldName,
-			n,
-			isPointer,
 			isStruct,
+			n,
+			fieldName,
 		})
 	}
 	if idType == 0 {
