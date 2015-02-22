@@ -333,6 +333,20 @@ func (s *Store) Get(is ...interface{}) error {
 	return nil
 }
 
+func (s *Store) Remove(is ...interface{}) error {
+	for _, i := range is {
+		t, ok := s.types[typeName(i)]
+		if !ok {
+			return UnregisteredType
+		}
+		_, err := t.statements[remove].Exec(t.GetID(i))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *Store) Count(i interface{}) (int, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
