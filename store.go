@@ -213,7 +213,7 @@ func (s *Store) defineType(i interface{}) error {
 	}
 	statements[remove] = stmt
 
-	sql = "SELECT " + sqlVars + ", [" + fields[id].name + "] FROM [" + name + "] ORDER BY [" + fields[id].name + "] LIMIT ? OFFSET ?;"
+	sql = "SELECT [" + fields[id].name + "] FROM [" + name + "] ORDER BY [" + fields[id].name + "] LIMIT ? OFFSET ?;"
 	stmt, err = s.db.Prepare(sql)
 	if err != nil {
 		return err
@@ -311,7 +311,7 @@ func (s *Store) get(is ...interface{}) error {
 		if id == 0 {
 			continue
 		}
-		vars := make([]interface{}, 0, len(t.fields))
+		vars := make([]interface{}, 0, len(t.fields)-1)
 		var toGet []interface{}
 		for pos, f := range t.fields {
 			if pos == t.primary {
@@ -328,7 +328,9 @@ func (s *Store) get(is ...interface{}) error {
 		}
 		row := t.statements[get].QueryRow(id)
 		err := row.Scan(vars...)
-		if err != nil {
+		if err == sql.ErrNoRows {
+			t.SetID(i, 0)
+		} else if err != nil {
 			return err
 		}
 		if len(toGet) > 0 {
@@ -338,6 +340,39 @@ func (s *Store) get(is ...interface{}) error {
 		}
 	}
 	return nil
+}
+
+func (s *Store) GetPage(is []interface{}, offset int) (int, error) {
+	if len(is) == 0 {
+		return 0, nil
+	}
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	t := s.types[typeName(is[0])]
+	rows, err := t.statements[getPage].Query(len(data), offset)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+	var toGet []interface{}
+	n := 0
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return 0, err
+		}
+		t.SetID(is[n], id)
+		n++
+	}
+	is = is[:n]
+	if err := rows.Err(); err == sql.ErrNoRows {
+		return 0, nil
+	} else if err != nil {
+		return 0, err
+	} else if err = s.get(is...); err != nil {
+		return 0, err
+	}
+	return n, nil
 }
 
 func (s *Store) Remove(is ...interface{}) error {
