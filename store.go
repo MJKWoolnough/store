@@ -274,9 +274,7 @@ func (s *Store) set(i interface{}, t *typeInfo, toSet *[]interface{}) error {
 			if err != nil {
 				return err
 			}
-			v := getFieldPointer(i, f.pos)
-			vt := s.types[typeName(v)]
-			vars = append(vars, getField(v, vt.fields[vt.primary].pos))
+			vars = append(vars, getField(ni, nt.fields[nt.primary].pos))
 		} else {
 			vars = append(vars, getField(i, f.pos))
 		}
@@ -295,6 +293,45 @@ func (s *Store) set(i interface{}, t *typeInfo, toSet *[]interface{}) error {
 		return err
 	}
 	t.SetID(i, lid)
+	return nil
+}
+
+func (s *Store) Get(is ...interface{}) error {
+	for _, i := range is {
+		t, ok := s.types[typeName(i)]
+		if !ok {
+			return UnregisteredType
+		}
+		id := t.GetID(i)
+		if id == 0 {
+			continue
+		}
+		vars := make([]interface{}, 0, len(t.fields))
+		var toGet []interface{}
+		for pos, f := range t.fields {
+			if pos == t.primary {
+				continue
+			}
+			if f.isStruct {
+				ni := getFieldPointer(i, f.pos)
+				nt := s.types[typeName(ni)]
+				toGet = append(toGet, ni)
+				vars = append(vars, getFieldPointer(ni, nt.fields[nt.primary].pos))
+			} else {
+				vars = append(vars, getFieldPointer(i, f.pos))
+			}
+		}
+		row := t.statements[get].QueryRow(id)
+		err := row.Scan(vars...)
+		if err != nil {
+			return err
+		}
+		if len(toGet) > 0 {
+			if err = s.Get(toGet...); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
