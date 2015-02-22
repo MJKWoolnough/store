@@ -236,6 +236,8 @@ func (s *Store) defineType(i interface{}) error {
 }
 
 func (s *Store) Set(is ...interface{}) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	var toSet []interface{}
 	for _, i := range is {
 		t, ok := s.types[typeName(i)]
@@ -295,6 +297,11 @@ func (s *Store) set(i interface{}, t *typeInfo, toSet *[]interface{}) error {
 }
 
 func (s *Store) Get(is ...interface{}) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	return s.get(is...)
+}
+func (s *Store) get(is ...interface{}) error {
 	for _, i := range is {
 		t, ok := s.types[typeName(i)]
 		if !ok {
@@ -325,7 +332,7 @@ func (s *Store) Get(is ...interface{}) error {
 			return err
 		}
 		if len(toGet) > 0 {
-			if err = s.Get(toGet...); err != nil {
+			if err = s.get(toGet...); err != nil {
 				return err
 			}
 		}
@@ -334,6 +341,8 @@ func (s *Store) Get(is ...interface{}) error {
 }
 
 func (s *Store) Remove(is ...interface{}) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	for _, i := range is {
 		t, ok := s.types[typeName(i)]
 		if !ok {
