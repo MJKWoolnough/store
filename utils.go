@@ -79,6 +79,9 @@ func typeName(i interface{}) string {
 }
 
 func (t *typeInfo) GetID(i interface{}) int64 {
+	if !isPointerStruct(i) {
+		return 0
+	}
 	switch v := getField(i, t.fields[t.primary].pos).(type) {
 	case int:
 		return int64(v)
@@ -89,6 +92,9 @@ func (t *typeInfo) GetID(i interface{}) int64 {
 }
 
 func (t *typeInfo) SetID(i interface{}, id int64) {
+	if !isPointerStruct(i) {
+		return
+	}
 	switch v := getFieldPointer(i, t.fields[t.primary].pos).(type) {
 	case *int:
 		*v = int(id)
