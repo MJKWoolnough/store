@@ -26,7 +26,7 @@ func getFieldPointer(i interface{}, fieldNum int) interface{} {
 }
 
 func getField(i interface{}, fieldNum int) interface{} {
-	v := reflect.ValueOf(i)
+	v := reflect.ValueOf(i).Elem()
 	if v.NumField() < fieldNum {
 		return nil
 	}

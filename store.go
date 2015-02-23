@@ -240,7 +240,7 @@ func (s *Store) Set(is ...interface{}) error {
 			return UnregisteredType
 		}
 		toSet = toSet[:0]
-		err := s.Set(i, &t, &toSet)
+		err := s.set(i, &t, &toSet)
 		if err != nil {
 			return err
 		}
