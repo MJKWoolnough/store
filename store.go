@@ -327,8 +327,7 @@ func (s *Store) get(is ...interface{}) error {
 			t.SetID(i, 0)
 		} else if err != nil {
 			return err
-		}
-		if len(toGet) > 0 {
+		} else if len(toGet) > 0 {
 			if err = s.get(toGet...); err != nil {
 				return err
 			}
