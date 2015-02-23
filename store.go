@@ -265,7 +265,7 @@ func (s *Store) set(i interface{}, t *typeInfo, toSet *[]interface{}) error {
 		if f.isStruct {
 			ni := getFieldPointer(i, f.pos)
 			nt := s.types[typeName(ni)]
-			err := s.Set(ni, &nt, toSet)
+			err := s.set(ni, &nt, toSet)
 			if err != nil {
 				return err
 			}
@@ -343,12 +343,11 @@ func (s *Store) GetPage(is []interface{}, offset int) (int, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	t := s.types[typeName(is[0])]
-	rows, err := t.statements[getPage].Query(len(data), offset)
+	rows, err := t.statements[getPage].Query(len(is), offset)
 	if err != nil {
 		return 0, err
 	}
 	defer rows.Close()
-	var toGet []interface{}
 	n := 0
 	for rows.Next() {
 		var id int64
