@@ -55,9 +55,9 @@ func (s *Store) Close() error {
 
 func (s *Store) Register(i interface{}) error {
 	if s.db == nil {
-		return DBClosed
+		return ErrDBClosed
 	} else if !isPointerStruct(i) {
-		return NoPointerStruct
+		return ErrNoPointerStruct
 	}
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -93,7 +93,7 @@ func (s *Store) defineType(i interface{}) error {
 		tmp := strings.ToLower(fieldName)
 		for _, tf := range fields {
 			if strings.ToLower(tf.name) == tmp {
-				return DuplicateColumn
+				return ErrDuplicateColumn
 			}
 		}
 		isPointer := f.Type.Kind() == reflect.Ptr
@@ -129,7 +129,7 @@ func (s *Store) defineType(i interface{}) error {
 		})
 	}
 	if idType == 0 {
-		return NoKey
+		return ErrNoKey
 	}
 	s.types[name] = typeInfo{
 		primary: id,
@@ -237,7 +237,7 @@ func (s *Store) Set(is ...interface{}) error {
 	for _, i := range is {
 		t, ok := s.types[typeName(i)]
 		if !ok {
-			return UnregisteredType
+			return ErrUnregisteredType
 		}
 		toSet = toSet[:0]
 		err := s.set(i, &t, &toSet)
@@ -300,7 +300,7 @@ func (s *Store) get(is ...interface{}) error {
 	for _, i := range is {
 		t, ok := s.types[typeName(i)]
 		if !ok {
-			return UnregisteredType
+			return ErrUnregisteredType
 		}
 		id := t.GetID(i)
 		if id == 0 {
@@ -348,6 +348,11 @@ func (s *Store) GetPage(is []interface{}, offset int) (int, error) {
 		return 0, err
 	}
 	defer rows.Close()
+	return s.getPage(is, rows)
+}
+
+func (s *Store) getPage(is []interface{}, rows *sql.Rows) (int, error) {
+	t := s.types[typeName(is[0])]
 	n := 0
 	for rows.Next() {
 		var id int64
@@ -374,7 +379,7 @@ func (s *Store) Remove(is ...interface{}) error {
 	for _, i := range is {
 		t, ok := s.types[typeName(i)]
 		if !ok {
-			return UnregisteredType
+			return ErrUnregisteredType
 		}
 		_, err := t.statements[remove].Exec(t.GetID(i))
 		if err != nil {
@@ -388,7 +393,7 @@ func (s *Store) Count(i interface{}) (int, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if !isPointerStruct(i) {
-		return 0, NoPointerStruct
+		return 0, ErrNoPointerStruct
 	}
 	name := typeName(i)
 	stmt := s.types[name].statements[count]
@@ -404,9 +409,10 @@ func (s *Store) Count(i interface{}) (int, error) {
 // Errors
 
 var (
-	DBClosed         = errors.New("database already closed")
-	NoPointerStruct  = errors.New("given variable is not a pointer to a struct")
-	NoKey            = errors.New("could not determine key")
-	DuplicateColumn  = errors.New("duplicate column name found")
-	UnregisteredType = errors.New("type not registered")
+	ErrDBClosed         = errors.New("database already closed")
+	ErrNoPointerStruct  = errors.New("given variable is not a pointer to a struct")
+	ErrNoKey            = errors.New("could not determine key")
+	ErrDuplicateColumn  = errors.New("duplicate column name found")
+	ErrUnregisteredType = errors.New("type not registered")
+	ErrInvalidType      = errors.New("invalid type")
 )
