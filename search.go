@@ -22,7 +22,7 @@ type Search struct {
 	Filters []Filter
 }
 
-func (s *Store) Search(i interface{}) *Search {
+func (s *Store) NewSearch(i interface{}) *Search {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if _, ok := s.types[typeName(i)]; !ok {
