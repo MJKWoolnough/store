@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+
+	_ "github.com/mxk/go-sqlite/sqlite3"
 )
 
 const (
@@ -36,8 +38,8 @@ type Store struct {
 	mutex sync.Mutex
 }
 
-func New(driverName, dataSourceName string) (*Store, error) {
-	db, err := sql.Open(driverName, dataSourceName)
+func New(dataSourceName string) (*Store, error) {
+	db, err := sql.Open("sqlite3", dataSourceName)
 	if err != nil {
 		return nil, err
 	}
