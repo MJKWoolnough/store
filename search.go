@@ -43,12 +43,11 @@ type PreparedSearch struct {
 
 func (s *Search) Prepare() (*PreparedSearch, error) {
 	var (
-		doneFirst bool
-		sqlVars   string
+		doneFirst    bool
+		sql, sqlVars string
+		vars         []interface{}
+		name         = typeName(s.i)
 	)
-	name := typeName(s.i)
-	var sql string
-	var vars []interface{}
 	if len(s.Filters) > 0 {
 		sql += "WHERE "
 		for n, f := range s.Filters {
