@@ -44,7 +44,7 @@ func (s *Search) Prepare() (*PreparedSearch, error) {
 		name         = typeName(s.i)
 	)
 	if s.Filter != nil {
-		sql += "WHERE " + s.Filter.SQL()
+		sql += "WHERE " + s.Filter.SQL() + " "
 		for _, i := range s.Filter.Vars() {
 			if v := reflect.ValueOf(i); v.Kind() != reflect.Ptr {
 				i = v.Addr().Interface()
