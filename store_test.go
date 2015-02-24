@@ -1,13 +1,9 @@
 package store
 
-import (
-	"testing"
-
-	_ "github.com/mxk/go-sqlite/sqlite3"
-)
+import "testing"
 
 func newTestStore() (*Store, error) {
-	return New("sqlite3", ":memory:")
+	return New(":memory:")
 }
 
 type testType struct {
