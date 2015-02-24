@@ -98,7 +98,7 @@ func (s *Search) Prepare() (*PreparedSearch, error) {
 			}
 		}
 	}
-	get, err := s.store.db.Prepare("SELECT [" + t.fields[t.primary].name + "] FROM [" + name + "] " + sql)
+	get, err := s.store.db.Prepare("SELECT [" + t.fields[t.primary].name + "] FROM [" + name + "] " + sql + "LIMIT ? OFFSET ?;")
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func (p *PreparedSearch) GetPage(is []interface{}, offset int) (int, error) {
 	}
 	p.store.mutex.Lock()
 	defer p.store.mutex.Unlock()
-	rows, err := p.getStmt.Query(p.getVars()...)
+	rows, err := p.getStmt.Query(append(p.getVars(), len(is), offset)...)
 	if err != nil {
 		return 0, err
 	}
@@ -134,7 +134,7 @@ func (p *PreparedSearch) GetPage(is []interface{}, offset int) (int, error) {
 }
 
 func (p *PreparedSearch) getVars() []interface{} {
-	vars := make([]interface{}, len(p.vars))
+	vars := make([]interface{}, len(p.vars), len(p.vars)+2)
 	for n, v := range p.vars {
 		vars[n] = reflect.ValueOf(v).Elem().Interface()
 	}
