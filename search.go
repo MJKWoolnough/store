@@ -10,16 +10,11 @@ type SortBy struct {
 	Asc    bool
 }
 
-type Filter interface {
-	SQL() string
-	Vars() []interface{}
-}
-
 type Search struct {
-	store   *Store
-	i       interface{}
-	Sort    []SortBy
-	Filters []Filter
+	store  *Store
+	i      interface{}
+	Sort   []SortBy
+	Filter Filter
 }
 
 func (s *Store) NewSearch(i interface{}) *Search {
@@ -48,22 +43,16 @@ func (s *Search) Prepare() (*PreparedSearch, error) {
 		vars         []interface{}
 		name         = typeName(s.i)
 	)
-	if len(s.Filters) > 0 {
-		sql += "WHERE "
-		for n, f := range s.Filters {
-			if n > 0 {
-				sql += "AND "
+	if s.Filter != nil {
+		sql += "WHERE " + s.Filter.SQL()
+		for _, i := range s.Filter.Vars() {
+			if v := reflect.ValueOf(i); v.Kind() != reflect.Ptr {
+				i = v.Addr().Interface()
 			}
-			sql += f.SQL() + " "
-			for _, i := range f.Vars() {
-				if v := reflect.ValueOf(i); v.Kind() != reflect.Ptr {
-					i = v.Addr().Interface()
-				}
-				if !isValidType(i) {
-					return nil, ErrInvalidType
-				}
-				vars = append(vars, i)
+			if !isValidType(i) {
+				return nil, ErrInvalidType
 			}
+			vars = append(vars, i)
 		}
 	}
 	s.store.mutex.Lock()
