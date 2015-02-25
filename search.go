@@ -74,7 +74,7 @@ func (s *Search) Prepare() (*PreparedSearch, error) {
 		sqlVars += "[" + f.name + "]"
 	}
 	if len(s.Sort) > 0 {
-		sql += "SORT BY "
+		sql += "ORDER BY "
 		for n, f := range s.Sort {
 			if n > 0 {
 				sql += ", "
