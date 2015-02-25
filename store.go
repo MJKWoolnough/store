@@ -278,8 +278,13 @@ func (s *Store) set(i interface{}, t *typeInfo, toSet *[]interface{}) error {
 	}
 	if isUpdate {
 		r, err := t.statements[update].Exec(append(vars, id)...)
-		if r.RowsAffected() > 0 || err != nil {
+		if err != nil {
 			return err
+		}
+		if ra, err := r.RowsAffected(); err != nil {
+			return err
+		} else if ra > 0 {
+			return nil
 		}
 		// id wasn't found, so insert...
 	}
