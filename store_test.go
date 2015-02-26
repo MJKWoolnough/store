@@ -1,6 +1,9 @@
 package store
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func newTestStore() (*Store, error) {
 	return New(":memory:")
@@ -59,6 +62,49 @@ func TestSetGet(t *testing.T) {
 			t.Errorf("test 2 %d: received unexpected error: %s", n+1, err)
 		} else if toRet.ID != test.ID || toRet.Data != test.Data || toRet.Number != test.Number {
 			t.Errorf("test 2 %d: returned data does not match expected\nexpecting: %v\ngot: %v", n+1, test.testType, toRet)
+		}
+	}
+}
+
+type embeddedTestType struct {
+	ID          int
+	Data        string
+	AnotherType testType
+}
+
+func TestSetGetAdvanced(t *testing.T) {
+	s, err := newTestStore()
+	defer s.Close()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	err = s.Register(new(embeddedTestType))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	tests := []embeddedTestType{
+		{0, "Beep", testType{0, "Boop", 1}},
+		{0, "Hello", testType{1, "Boop", 1}},
+		{0, "123", testType{0, "456", 123}},
+	}
+
+	for n, test := range tests {
+		err := s.Set(&test)
+		if err != nil {
+			t.Errorf("test %d: unexpected error - %s", n+1, err)
+			continue
+		}
+		ett := embeddedTestType{ID: test.ID}
+		err = s.Get(&ett)
+		if err != nil {
+			t.Errorf("test %d: unexpected error - %s", n+1, err)
+			continue
+		}
+		if !reflect.DeepEqual(&ett, &test) {
+			t.Errorf("test %d: expecting %v, got %v", n+1, test, ett)
 		}
 	}
 }
