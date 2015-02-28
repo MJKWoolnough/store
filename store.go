@@ -404,14 +404,12 @@ func (s *Store) Count(i interface{}) (int, error) {
 	if !isPointerStruct(i) {
 		return 0, ErrNoPointerStruct
 	}
-	name := typeName(i)
-	stmt := s.types[name].statements[count]
-	res, err := stmt.Query()
-	if err != nil {
-		return 0, err
+	t, ok := s.types[typeName(i)]
+	if !ok {
+		return 0, ErrUnregisteredType
 	}
 	num := 0
-	err = res.Scan(&num)
+	err := t.statements[count].QueryRow().Scan(&num)
 	return num, err
 }
 
