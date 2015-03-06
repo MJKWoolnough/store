@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	_ "github.com/mxk/go-sqlite/sqlite3"
 )
@@ -107,10 +108,12 @@ func (s *Store) defineType(i interface{}) error {
 		}
 		isStruct := false
 		if isPointerStruct(iface) {
-			if err := s.defineType(iface); err != nil {
-				return err
+			if _, ok := iface.(*time.Time); !ok {
+				if err := s.defineType(iface); err != nil {
+					return err
+				}
+				isStruct = true
 			}
-			isStruct = true
 		} else if !isValidType(iface) {
 			continue
 		}
