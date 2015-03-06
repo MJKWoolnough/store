@@ -356,7 +356,10 @@ func (s *Store) GetPage(is []interface{}, offset int) (int, error) {
 	}
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	t := s.types[typeName(is[0])]
+	t, ok := s.types[typeName(is[0])]
+	if !ok {
+		return 0, ErrInvalidType
+	}
 	rows, err := t.statements[getPage].Query(len(is), offset)
 	if err != nil {
 		return 0, err
