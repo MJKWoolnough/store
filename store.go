@@ -107,7 +107,9 @@ func (s *Store) defineType(i interface{}) error {
 		}
 		isStruct := false
 		if isPointerStruct(iface) {
-			s.defineType(iface)
+			if err := s.defineType(iface); err != nil {
+				return err
+			}
 			isStruct = true
 		} else if !isValidType(iface) {
 			continue
