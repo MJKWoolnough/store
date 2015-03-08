@@ -56,15 +56,21 @@ func (s *Store) Close() error {
 	return err
 }
 
-func (s *Store) Register(i interface{}) error {
+func (s *Store) Register(is ...interface{}) error {
 	if s.db == nil {
 		return ErrDBClosed
-	} else if !isPointerStruct(i) {
-		return ErrNoPointerStruct
 	}
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	return s.defineType(i)
+	for _, i := range is {
+		if !isPointerStruct(i) {
+			return ErrNoPointerStruct
+		}
+		if err := s.defineType(i); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Store) defineType(i interface{}) error {
