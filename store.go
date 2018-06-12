@@ -1,5 +1,5 @@
 // Package store automatically configures a database to store structured information in an sql database
-package store
+package store // import "vimagination.zapto.org/store"
 
 import (
 	"database/sql"
