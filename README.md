@@ -3,7 +3,7 @@
     import "vimagination.zapto.org/store"
 
 Package store automatically configures a database to store structured
-information in an sql database
+information in an sql database.
 
 ## Usage
 
@@ -17,6 +17,7 @@ var (
 	ErrInvalidType      = errors.New("invalid type")
 )
 ```
+Errors.
 
 #### type And
 
