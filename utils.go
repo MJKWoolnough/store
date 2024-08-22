@@ -7,6 +7,7 @@ import (
 
 func isPointerStruct(i interface{}) bool {
 	t := reflect.TypeOf(i)
+
 	return t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct
 }
 
@@ -15,13 +16,16 @@ func getFieldPointer(i interface{}, fieldNum int) interface{} {
 	if v.NumField() < fieldNum {
 		return nil
 	}
+
 	if v.Type().Field(fieldNum).PkgPath != "" {
 		return nil
 	}
+
 	f := v.Field(fieldNum)
 	if f.Kind() == reflect.Ptr {
 		return f.Interface()
 	}
+
 	return f.Addr().Interface()
 }
 
@@ -30,13 +34,16 @@ func getField(i interface{}, fieldNum int) interface{} {
 	if v.NumField() < fieldNum {
 		return nil
 	}
+
 	if v.Type().Field(fieldNum).PkgPath != "" {
 		return nil
 	}
+
 	f := v.Field(fieldNum)
 	if f.Kind() == reflect.Ptr {
 		return f.Elem().Interface()
 	}
+
 	return f.Interface()
 }
 
@@ -45,6 +52,7 @@ func getType(i interface{}, fieldNum int) string {
 	if v == nil {
 		return ""
 	}
+
 	switch v.(type) {
 	case *int, *int64, *time.Time:
 		return "INTEGER"
@@ -55,6 +63,7 @@ func getType(i interface{}, fieldNum int) string {
 	case *[]byte:
 		return "BLOB"
 	}
+
 	return ""
 }
 
@@ -64,6 +73,7 @@ func isValidType(i interface{}) bool {
 		*string, *float32, *float64, *bool, *time.Time:
 		return true
 	}
+
 	return false
 }
 
@@ -72,6 +82,7 @@ func isValidKeyType(i interface{}) bool {
 	case *int, *int64:
 		return true
 	}
+
 	return false
 }
 
@@ -80,6 +91,7 @@ func typeName(i interface{}) string {
 	if name[0] == '*' {
 		name = name[1:]
 	}
+
 	return name
 }
 
@@ -87,12 +99,14 @@ func (t *typeInfo) GetID(i interface{}) int64 {
 	if !isPointerStruct(i) {
 		return 0
 	}
+
 	switch v := getField(i, t.fields[t.primary].pos).(type) {
 	case int:
 		return int64(v)
 	case int64:
 		return v
 	}
+
 	return 0
 }
 
@@ -100,6 +114,7 @@ func (t *typeInfo) SetID(i interface{}, id int64) {
 	if !isPointerStruct(i) {
 		return
 	}
+
 	switch v := getFieldPointer(i, t.fields[t.primary].pos).(type) {
 	case *int:
 		*v = int(id)
