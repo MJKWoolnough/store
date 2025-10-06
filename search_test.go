@@ -31,18 +31,18 @@ func TestSearch(t *testing.T) {
 		return
 	}
 	values := []*testType{
-		&testType{0, "One", 45},
-		&testType{0, "Two", 657},
-		&testType{0, "Three", 43},
-		&testType{0, "Four", 3},
-		&testType{0, "Five", 83},
-		&testType{0, "Six", 214},
-		&testType{0, "Seven", 1784},
-		&testType{0, "Eight", 90},
-		&testType{0, "Nine", 214},
-		&testType{0, "Ten", 45},
-		&testType{0, "Eleven", 45},
-		&testType{0, "Twelve", 77},
+		{0, "One", 45},
+		{0, "Two", 657},
+		{0, "Three", 43},
+		{0, "Four", 3},
+		{0, "Five", 83},
+		{0, "Six", 214},
+		{0, "Seven", 1784},
+		{0, "Eight", 90},
+		{0, "Nine", 214},
+		{0, "Ten", 45},
+		{0, "Eleven", 45},
+		{0, "Twelve", 77},
 	}
 	for _, value := range values {
 		if err = s.Set(value); err != nil {
