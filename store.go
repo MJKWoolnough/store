@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	_ "github.com/mxk/go-sqlite/sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 const (
@@ -40,7 +40,7 @@ type Store struct {
 }
 
 func New(dataSourceName string) (*Store, error) {
-	db, err := sql.Open("sqlite3", dataSourceName)
+	db, err := sql.Open("sqlite", dataSourceName)
 	if err != nil {
 		return nil, err
 	}
