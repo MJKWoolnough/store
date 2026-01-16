@@ -14,8 +14,8 @@ func (m match) SQL() string {
 	return "[" + m.col + "] = ?"
 }
 
-func (m match) Vars() []interface{} {
-	return []interface{}{m.num}
+func (m match) Vars() []any {
+	return []any{m.num}
 }
 
 func TestSearch(t *testing.T) {
@@ -74,7 +74,7 @@ func TestSearch(t *testing.T) {
 	for n, test := range tests {
 		number = test.number
 		tts := make([]testType, 10)
-		vars := make([]interface{}, 10)
+		vars := make([]any, 10)
 		for i := 0; i < 10; i++ {
 			vars[i] = &tts[i]
 		}

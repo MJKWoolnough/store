@@ -5,13 +5,13 @@ import (
 	"time"
 )
 
-func isPointerStruct(i interface{}) bool {
+func isPointerStruct(i any) bool {
 	t := reflect.TypeOf(i)
 
 	return t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct
 }
 
-func getFieldPointer(i interface{}, fieldNum int) interface{} {
+func getFieldPointer(i any, fieldNum int) interface{} {
 	v := reflect.ValueOf(i).Elem()
 	if v.NumField() < fieldNum {
 		return nil
@@ -29,7 +29,7 @@ func getFieldPointer(i interface{}, fieldNum int) interface{} {
 	return f.Addr().Interface()
 }
 
-func getField(i interface{}, fieldNum int) interface{} {
+func getField(i any, fieldNum int) interface{} {
 	v := reflect.ValueOf(i).Elem()
 	if v.NumField() < fieldNum {
 		return nil
@@ -47,7 +47,7 @@ func getField(i interface{}, fieldNum int) interface{} {
 	return f.Interface()
 }
 
-func getType(i interface{}, fieldNum int) string {
+func getType(i any, fieldNum int) string {
 	v := getFieldPointer(i, fieldNum)
 	if v == nil {
 		return ""
@@ -67,7 +67,7 @@ func getType(i interface{}, fieldNum int) string {
 	return ""
 }
 
-func isValidType(i interface{}) bool {
+func isValidType(i any) bool {
 	switch i.(type) {
 	case *int, *int64,
 		*string, *float32, *float64, *bool, *time.Time:
@@ -77,7 +77,7 @@ func isValidType(i interface{}) bool {
 	return false
 }
 
-func isValidKeyType(i interface{}) bool {
+func isValidKeyType(i any) bool {
 	switch i.(type) {
 	case *int, *int64:
 		return true
@@ -86,7 +86,7 @@ func isValidKeyType(i interface{}) bool {
 	return false
 }
 
-func typeName(i interface{}) string {
+func typeName(i any) string {
 	name := reflect.TypeOf(i).String()
 	if name[0] == '*' {
 		name = name[1:]
@@ -95,7 +95,7 @@ func typeName(i interface{}) string {
 	return name
 }
 
-func (t *typeInfo) GetID(i interface{}) int64 {
+func (t *typeInfo) GetID(i any) int64 {
 	if !isPointerStruct(i) {
 		return 0
 	}
@@ -110,7 +110,7 @@ func (t *typeInfo) GetID(i interface{}) int64 {
 	return 0
 }
 
-func (t *typeInfo) SetID(i interface{}, id int64) {
+func (t *typeInfo) SetID(i any, id int64) {
 	if !isPointerStruct(i) {
 		return
 	}

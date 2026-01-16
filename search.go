@@ -12,12 +12,12 @@ type SortBy struct {
 
 type Search struct {
 	store  *Store
-	i      interface{}
+	i      any
 	Sort   []SortBy
 	Filter Filter
 }
 
-func (s *Store) NewSearch(i interface{}) *Search {
+func (s *Store) NewSearch(i any) *Search {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -34,7 +34,7 @@ func (s *Store) NewSearch(i interface{}) *Search {
 type PreparedSearch struct {
 	countStmt *sql.Stmt
 	getStmt   *sql.Stmt
-	vars      []interface{}
+	vars      []any
 	store     *Store
 }
 
@@ -42,7 +42,7 @@ func (s *Search) Prepare() (*PreparedSearch, error) {
 	var (
 		doneFirst    bool
 		sql, sqlVars string
-		vars         []interface{}
+		vars         []any
 		name         = typeName(s.i)
 	)
 
@@ -130,7 +130,7 @@ func (p *PreparedSearch) Count() (int, error) {
 	return count, err
 }
 
-func (p *PreparedSearch) GetPage(is []interface{}, offset int) (int, error) {
+func (p *PreparedSearch) GetPage(is []any, offset int) (int, error) {
 	if len(is) == 0 {
 		return 0, nil
 	}
@@ -148,8 +148,8 @@ func (p *PreparedSearch) GetPage(is []interface{}, offset int) (int, error) {
 	return p.store.getPage(is, rows)
 }
 
-func (p *PreparedSearch) getVars() []interface{} {
-	vars := make([]interface{}, len(p.vars), len(p.vars)+2)
+func (p *PreparedSearch) getVars() []any {
+	vars := make([]any, len(p.vars), len(p.vars)+2)
 
 	for n, v := range p.vars {
 		vars[n] = reflect.ValueOf(v).Elem().Interface()

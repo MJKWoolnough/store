@@ -58,7 +58,7 @@ func (s *Store) Close() error {
 	return err
 }
 
-func (s *Store) Register(is ...interface{}) error {
+func (s *Store) Register(is ...any) error {
 	if s.db == nil {
 		return ErrDBClosed
 	}
@@ -79,7 +79,7 @@ func (s *Store) Register(is ...interface{}) error {
 	return nil
 }
 
-func (s *Store) defineType(i interface{}) error {
+func (s *Store) defineType(i any) error {
 	name := typeName(i)
 	if _, ok := s.types[name]; ok {
 		return nil
@@ -119,7 +119,7 @@ func (s *Store) defineType(i interface{}) error {
 
 		isPointer := f.Type.Kind() == reflect.Ptr
 
-		var iface interface{}
+		var iface any
 
 		if isPointer {
 			iface = v.Field(n).Interface()
@@ -283,11 +283,11 @@ func (s *Store) defineType(i interface{}) error {
 	return nil
 }
 
-func (s *Store) Set(is ...interface{}) error {
+func (s *Store) Set(is ...any) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	var toSet []interface{}
+	var toSet []any
 
 	for _, i := range is {
 		t, ok := s.types[typeName(i)]
@@ -305,7 +305,7 @@ func (s *Store) Set(is ...interface{}) error {
 	return nil
 }
 
-func (s *Store) set(i interface{}, t *typeInfo, toSet *[]interface{}) error {
+func (s *Store) set(i any, t *typeInfo, toSet *[]interface{}) error {
 	for _, oi := range *toSet {
 		if oi == i {
 			return nil
@@ -315,7 +315,7 @@ func (s *Store) set(i interface{}, t *typeInfo, toSet *[]interface{}) error {
 	(*toSet) = append(*toSet, i)
 	id := t.GetID(i)
 	isUpdate := id != 0
-	vars := make([]interface{}, 0, len(t.fields))
+	vars := make([]any, 0, len(t.fields))
 
 	for pos, f := range t.fields {
 		if pos == t.primary {
@@ -365,14 +365,14 @@ func (s *Store) set(i interface{}, t *typeInfo, toSet *[]interface{}) error {
 	return nil
 }
 
-func (s *Store) Get(is ...interface{}) error {
+func (s *Store) Get(is ...any) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	return s.get(is...)
 }
 
-func (s *Store) get(is ...interface{}) error {
+func (s *Store) get(is ...any) error {
 	for _, i := range is {
 		t, ok := s.types[typeName(i)]
 		if !ok {
@@ -384,9 +384,9 @@ func (s *Store) get(is ...interface{}) error {
 			continue
 		}
 
-		vars := make([]interface{}, 0, len(t.fields)-1)
+		vars := make([]any, 0, len(t.fields)-1)
 
-		var toGet []interface{}
+		var toGet []any
 
 		for pos, f := range t.fields {
 			if pos == t.primary {
@@ -419,7 +419,7 @@ func (s *Store) get(is ...interface{}) error {
 	return nil
 }
 
-func (s *Store) GetPage(is []interface{}, offset int) (int, error) {
+func (s *Store) GetPage(is []any, offset int) (int, error) {
 	if len(is) == 0 {
 		return 0, nil
 	}
@@ -442,7 +442,7 @@ func (s *Store) GetPage(is []interface{}, offset int) (int, error) {
 	return s.getPage(is, rows)
 }
 
-func (s *Store) getPage(is []interface{}, rows *sql.Rows) (int, error) {
+func (s *Store) getPage(is []any, rows *sql.Rows) (int, error) {
 	t := s.types[typeName(is[0])]
 	n := 0
 
@@ -471,7 +471,7 @@ func (s *Store) getPage(is []interface{}, rows *sql.Rows) (int, error) {
 	return n, nil
 }
 
-func (s *Store) Remove(is ...interface{}) error {
+func (s *Store) Remove(is ...any) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -490,7 +490,7 @@ func (s *Store) Remove(is ...interface{}) error {
 	return nil
 }
 
-func (s *Store) Count(i interface{}) (int, error) {
+func (s *Store) Count(i any) (int, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 

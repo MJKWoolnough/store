@@ -174,23 +174,27 @@ func TestGetPage(t *testing.T) {
 		toGet, offset int
 		result        []testType
 	}{
-		{1, 0,
+		{
+			1, 0,
 			[]testType{
 				{1, "BEEP", 1},
 			},
 		},
-		{1, 1,
+		{
+			1, 1,
 			[]testType{
 				{2, "3.14159", 42},
 			},
 		},
-		{2, 2,
+		{
+			2, 2,
 			[]testType{
 				{3, "hats", 420},
 				{4, "string", 25},
 			},
 		},
-		{2, 3,
+		{
+			2, 3,
 			[]testType{
 				{4, "string", 25},
 			},
@@ -198,7 +202,7 @@ func TestGetPage(t *testing.T) {
 	}
 	for n, test := range tests {
 		data := make([]testType, test.toGet)
-		idata := make([]interface{}, test.toGet)
+		idata := make([]any, test.toGet)
 		for i := 0; i < test.toGet; i++ {
 			idata[i] = &data[i]
 		}

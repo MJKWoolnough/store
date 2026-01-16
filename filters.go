@@ -2,7 +2,7 @@ package store
 
 type Filter interface {
 	SQL() string
-	Vars() []interface{}
+	Vars() []any
 }
 
 type And []Filter
@@ -23,8 +23,8 @@ func (a And) SQL() string {
 	return sql
 }
 
-func (a And) Vars() []interface{} {
-	var vars []interface{}
+func (a And) Vars() []any {
+	var vars []any
 
 	for _, f := range a {
 		vars = append(vars, f.Vars()...)
@@ -51,8 +51,8 @@ func (o Or) SQL() string {
 	return sql
 }
 
-func (o Or) Vars() []interface{} {
-	var vars []interface{}
+func (o Or) Vars() []any {
+	var vars []any
 
 	for _, f := range o {
 		vars = append(vars, f.Vars()...)
