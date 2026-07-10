@@ -1,5 +1,7 @@
 package store
 
+import "strings"
+
 type Filter interface {
 	SQL() string
 	Vars() []any
@@ -8,19 +10,20 @@ type Filter interface {
 type And []Filter
 
 func (a And) SQL() string {
-	sql := "("
+	var sql strings.Builder
+	sql.WriteString("(")
 
 	for n, f := range a {
 		if n > 0 {
-			sql += " AND "
+			sql.WriteString(" AND ")
 		}
 
-		sql += f.SQL()
+		sql.WriteString(f.SQL())
 	}
 
-	sql += ")"
+	sql.WriteString(")")
 
-	return sql
+	return sql.String()
 }
 
 func (a And) Vars() []any {
@@ -36,19 +39,20 @@ func (a And) Vars() []any {
 type Or []Filter
 
 func (o Or) SQL() string {
-	sql := "("
+	var sql strings.Builder
+	sql.WriteString("(")
 
 	for n, f := range o {
 		if n > 0 {
-			sql += " OR "
+			sql.WriteString(" OR ")
 		}
 
-		sql += f.SQL()
+		sql.WriteString(f.SQL())
 	}
 
-	sql += ")"
+	sql.WriteString(")")
 
-	return sql
+	return sql.String()
 }
 
 func (o Or) Vars() []any {
