@@ -50,7 +50,7 @@ func (s *Search) Prepare() (*PreparedSearch, error) {
 		sql += "WHERE " + s.Filter.SQL() + " "
 
 		for _, i := range s.Filter.Vars() {
-			if v := reflect.ValueOf(i); v.Kind() != reflect.Ptr {
+			if v := reflect.ValueOf(i); v.Kind() != reflect.Pointer {
 				i = v.Addr().Interface()
 			}
 

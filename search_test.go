@@ -75,7 +75,7 @@ func TestSearch(t *testing.T) {
 		number = test.number
 		tts := make([]testType, 10)
 		vars := make([]any, 10)
-		for i := 0; i < 10; i++ {
+		for i := range 10 {
 			vars[i] = &tts[i]
 		}
 		found, err := matchNumberPrepared.GetPage(vars, 0)

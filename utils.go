@@ -8,10 +8,10 @@ import (
 func isPointerStruct(i any) bool {
 	t := reflect.TypeOf(i)
 
-	return t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct
+	return t.Kind() == reflect.Pointer && t.Elem().Kind() == reflect.Struct
 }
 
-func getFieldPointer(i any, fieldNum int) interface{} {
+func getFieldPointer(i any, fieldNum int) any {
 	v := reflect.ValueOf(i).Elem()
 	if v.NumField() < fieldNum {
 		return nil
@@ -22,14 +22,14 @@ func getFieldPointer(i any, fieldNum int) interface{} {
 	}
 
 	f := v.Field(fieldNum)
-	if f.Kind() == reflect.Ptr {
+	if f.Kind() == reflect.Pointer {
 		return f.Interface()
 	}
 
 	return f.Addr().Interface()
 }
 
-func getField(i any, fieldNum int) interface{} {
+func getField(i any, fieldNum int) any {
 	v := reflect.ValueOf(i).Elem()
 	if v.NumField() < fieldNum {
 		return nil
@@ -40,7 +40,7 @@ func getField(i any, fieldNum int) interface{} {
 	}
 
 	f := v.Field(fieldNum)
-	if f.Kind() == reflect.Ptr {
+	if f.Kind() == reflect.Pointer {
 		return f.Elem().Interface()
 	}
 

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -93,7 +94,7 @@ func (s *Store) defineType(i any) error {
 	id := 0
 	idType := 0
 
-	for n := 0; n < numFields; n++ {
+	for n := range numFields {
 		f := v.Type().Field(n)
 		if f.PkgPath != "" { // not exported
 			continue
@@ -117,7 +118,7 @@ func (s *Store) defineType(i any) error {
 			}
 		}
 
-		isPointer := f.Type.Kind() == reflect.Ptr
+		isPointer := f.Type.Kind() == reflect.Pointer
 
 		var iface any
 
@@ -305,11 +306,9 @@ func (s *Store) Set(is ...any) error {
 	return nil
 }
 
-func (s *Store) set(i any, t *typeInfo, toSet *[]interface{}) error {
-	for _, oi := range *toSet {
-		if oi == i {
-			return nil
-		}
+func (s *Store) set(i any, t *typeInfo, toSet *[]any) error {
+	if slices.Contains(*toSet, i) {
+		return nil
 	}
 
 	(*toSet) = append(*toSet, i)
